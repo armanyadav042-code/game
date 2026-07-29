@@ -1,1301 +1,1387 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Idle Wall Destroyer</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Press+Start+2P&amp;display=swap');
-        
-        :root {
-            --bg: #0f0f1a;
-            --panel: #1a1a2e;
-            --accent: #00f0ff;
-            --gold: #ffd700;
-            --neon-pink: #ff00aa;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            background: var(--bg);
-            color: #fff;
-            font-family: 'Inter', system_ui, sans-serif;
-            overflow: hidden;
-            user-select: none;
-            touch-action: manipulation;
-        }
-        
-        #game-container {
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-        
-        .top-bar {
-            background: var(--panel);
-            padding: 12px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 3px solid var(--accent);
-            z-index: 100;
-        }
-        
-        .currency {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 700;
-            font-size: 22px;
-        }
-        
-        .currency.gold {
-            color: var(--gold);
-        }
-        
-        .currency .icon {
-            font-size: 26px;
-        }
-        
-        .main-area {
-            flex: 1;
-            display: flex;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        #wall-container {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-        
-        #wall {
-            width: 380px;
-            height: 380px;
-            background: linear-gradient(#555, #333);
-            border: 12px solid #222;
-            border-radius: 20px;
-            position: relative;
-            box-shadow: 0 0 30px rgba(0, 240, 255, 0.3),
-                        inset 0 0 60px rgba(0,0,0,0.6);
-            transition: transform 0.05s ease;
-            cursor: pointer;
-            overflow: hidden;
-        }
-        
-        #wall.broken {
-            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
-            transform: scale(0.2) rotate(25deg);
-            opacity: 0;
-        }
-        
-        .wall-material {
-            position: absolute;
-            inset: 0;
-            background-size: cover;
-            transition: background 0.3s ease;
-        }
-        
-        .cracks {
-            position: absolute;
-            inset: 0;
-            background: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22380%22 height=%22380%22%3E%3Cpath fill=%22none%22 stroke=%22%23ffffff22%22 stroke-width=%223%22 d=%22M120 80 Q180 140 140 200 Q200 250 170 320%22/%3E%3Cpath fill=%22none%22 stroke=%22%23ffffff22%22 stroke-width=%223%22 d=%22M240 60 Q200 160 280 220 Q240 290 300 350%22/%3E%3C/svg%3E') center/cover;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
-        }
-        
-        .wall-hp {
-            position: absolute;
-            bottom: -45px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 340px;
-            height: 18px;
-            background: #222;
-            border: 3px solid #444;
-            border-radius: 9999px;
-            overflow: hidden;
-        }
-        
-        .hp-bar {
-            height: 100%;
-            background: linear-gradient(to right, #00ff88, var(--accent));
-            width: 100%;
-            transition: width 0.1s linear;
-            box-shadow: 0 0 15px var(--accent);
-        }
-        
-        .wall-label {
-            position: absolute;
-            bottom: -75px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 14px;
-            font-weight: 600;
-            color: #aaa;
-            text-align: center;
-            width: 100%;
-        }
-        
-        .damage-number {
-            position: absolute;
-            font-weight: 700;
-            font-size: 22px;
-            color: #fff;
-            text-shadow: 0 0 10px #fff,
-                        2px 2px 0 #000;
-            pointer-events: none;
-            z-index: 200;
-            animation: damage-pop 0.8s forwards;
-        }
-        
-        @keyframes damage-pop {
-            0% { transform: scale(0.6); opacity: 1; }
-            40% { transform: scale(1.3); }
-            100% { transform: scale(0.9); opacity: 0; }
-        }
-        
-        .particle {
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            background: #fff;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 150;
-            box-shadow: 0 0 8px #fff;
-        }
-        
-        .nav-buttons {
-            display: flex;
-            gap: 8px;
-            padding: 12px 20px;
-            background: var(--panel);
-            border-top: 3px solid #333;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        
-        .nav-btn {
-            background: #222;
-            color: #fff;
-            border: 3px solid #444;
-            padding: 10px 22px;
-            border-radius: 8px;
-            font-weight: 700;
-            font-size: 15px;
-            cursor: pointer;
-            transition: all 0.1s ease;
-        }
-        
-        .nav-btn:hover {
-            background: #333;
-            border-color: var(--accent);
-        }
-        
-        .nav-btn.active {
-            background: var(--accent);
-            color: #000;
-            border-color: #fff;
-        }
-        
-        .panel {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 15, 26, 0.95);
-            z-index: 300;
-            padding: 20px;
-            display: none;
-            flex-direction: column;
-            overflow-y: auto;
-        }
-        
-        .panel.active {
-            display: flex;
-        }
-        
-        .panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        
-        .panel-header h2 {
-            font-size: 28px;
-            color: var(--accent);
-        }
-        
-        .close-btn {
-            background: #333;
-            color: white;
-            border: none;
-            width: 42px;
-            height: 42px;
-            font-size: 22px;
-            border-radius: 50%;
-            cursor: pointer;
-        }
-        
-        .upgrade-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 16px;
-        }
-        
-        .upgrade-card {
-            background: #1f1f35;
-            border: 3px solid #333;
-            border-radius: 12px;
-            padding: 16px;
-            transition: all 0.2s ease;
-        }
-        
-        .upgrade-card:hover {
-            border-color: var(--accent);
-            transform: translateY(-2px);
-        }
-        
-        .upgrade-card h4 {
-            font-size: 18px;
-            margin-bottom: 6px;
-        }
-        
-        .upgrade-card .cost {
-            color: var(--gold);
-            font-weight: 700;
-        }
-        
-        .upgrade-card button {
-            margin-top: 10px;
-            width: 100%;
-            padding: 10px;
-            background: #00cc88;
-            border: none;
-            color: #000;
-            font-weight: 800;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-        
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 4px 0;
-        }
-        
-        .world-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-            gap: 12px;
-        }
-        
-        .world-card {
-            background: #1f1f35;
-            border: 3px solid #333;
-            padding: 14px;
-            border-radius: 10px;
-            text-align: center;
-            cursor: pointer;
-        }
-        
-        .world-card.unlocked {
-            border-color: var(--accent);
-        }
-        
-        .world-card.current {
-            background: #2a2a4a;
-            border-color: var(--neon-pink);
-        }
-        
-        .helper-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 16px;
-        }
-        
-        .helper-card {
-            background: #1f1f35;
-            border: 3px solid #444;
-            padding: 14px;
-            border-radius: 10px;
-        }
-        
-        .achievement {
-            background: #1f1f35;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .achievement.completed {
-            border: 2px solid #00ff88;
-        }
-        
-        .tool-icon {
-            font-size: 42px;
-            line-height: 1;
-        }
-        
-        .damage-text {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.6);
-            padding: 4px 12px;
-            border-radius: 9999px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-        
-        .floating-text {
-            position: absolute;
-            font-weight: 700;
-            pointer-events: none;
-            z-index: 400;
-            animation: float-up 1.2s forwards;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Idle Wall Destroyer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ============================================
+       IDLE WALL DESTROYER — STYLESHEET
+       Dark neon premium idle game UI
+       ============================================ */
+
+    :root {
+      --bg-deep: #07070f;
+      --bg-panel: rgba(18, 16, 28, 0.82);
+      --panel-solid: #12101c;
+      --accent-cyan: #00f0ff;
+      --accent-pink: #ff00aa;
+      --accent-gold: #ffd700;
+      --accent-green: #00ffa3;
+      --text-main: #f0f0f8;
+      --text-dim: #8899aa;
+      --border-glow: rgba(0, 240, 255, 0.35);
+      --danger: #ff2a6a;
+      --font-heading: 'Orbitron', system-ui, sans-serif;
+      --font-body: 'Inter', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: var(--bg-deep);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      user-select: none;
+      touch-action: manipulation;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Animated ambient background grid */
+    .ambient-bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+    }
+    .ambient-bg::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 30% 20%, rgba(0,240,255,0.06) 0%, transparent 40%),
+                  radial-gradient(circle at 70% 80%, rgba(255,0,170,0.05) 0%, transparent 40%);
+      animation: ambientShift 18s ease-in-out infinite alternate;
+    }
+    @keyframes ambientShift {
+      from { background-position: 0% 0%; }
+      to   { background-position: 100% 100%; }
+    }
+    .grid-lines {
+      position: absolute; inset: 0; opacity: 0.06;
+      background-image:
+        linear-gradient(var(--accent-cyan) 1px, transparent 1px),
+        linear-gradient(90deg, var(--accent-cyan) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    /* Main container */
+    #app {
+      position: relative; z-index: 1;
+      width: 100vw; height: 100vh;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ============================================
+       HEADER
+       ============================================ */
+    .game-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 22px;
+      background: linear-gradient(180deg, rgba(18,16,28,0.9) 0%, rgba(12,10,20,0.95) 100%);
+      border-bottom: 2px solid rgba(0,240,255,0.12);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+      flex-shrink: 0;
+    }
+
+    .currency-group { display: flex; gap: 20px; align-items: center; }
+
+    .currency-pill {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 9999px;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      font-family: var(--font-mono);
+      font-weight: 700; font-size: 18px; letter-spacing: 0.02em;
+    }
+    .currency-pill.gold { color: var(--accent-gold); border-color: rgba(255,215,0,0.25); }
+    .currency-pill.gem { color: var(--accent-pink); border-color: rgba(255,0,170,0.25); }
+    .currency-pill .icon { font-size: 22px; line-height: 1; }
+
+    .header-meta { display: flex; gap: 16px; align-items: center; font-size: 13px; color: var(--text-dim); }
+    .header-meta strong { color: var(--text-main); font-family: var(--font-heading); letter-spacing: 0.04em; }
+
+    /* ============================================
+       MAIN GAME AREA
+       ============================================ */
+    .main-stage {
+      flex: 1; position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* Wall Container */
+    .wall-stage {
+      position: relative; width: min(420px, 82vw); height: min(420px, 82vw);
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* The Wall */
+    #wall {
+      width: 100%; height: 100%;
+      position: relative;
+      border-radius: 24px; overflow: hidden;
+      background: linear-gradient(135deg, #333 0%, #222 60%, #111 100%);
+      border: 6px solid #18181f;
+      box-shadow:
+        0 0 0 3px rgba(0,240,255,0.08),
+        0 0 60px rgba(0,240,255,0.15),
+        inset 0 0 80px rgba(0,0,0,0.8);
+      transition: transform 0.05s ease, filter 0.1s ease;
+      cursor: pointer;
+    }
+
+    #wall:active { transform: scale(0.985); filter: brightness(1.1); }
+
+    /* Wall material overlay with color based on world */
+    .wall-face {
+      position: absolute; inset: 0;
+      background-size: cover; background-position: center;
+      transition: background 0.4s ease, opacity 0.4s ease;
+      opacity: 0.9;
+    }
+    .wall-face::after {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 60% 40%, rgba(255,255,255,0.12) 0%, transparent 50%),
+                  radial-gradient(circle at 30% 70%, rgba(0,0,0,0.5) 0%, transparent 60%);
+    }
+
+    /* Crack stages — progressive SVG cracks overlaid */
+    .crack-stage { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.3s ease; }
+    .crack-stage.active { opacity: 0.55; }
+
+    /* Impact glow when hit */
+    .hit-flash {
+      position: absolute; inset: 0; pointer-events: none; opacity: 0;
+      background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.35) 0%, transparent 70%);
+      transition: opacity 0.05s ease;
+    }
+
+    /* Center icon / decoration */
+    .wall-center-decor {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: clamp(60px, 14vw, 100px);
+      filter: drop-shadow(0 0 25px rgba(255,215,0,0.5));
+      pointer-events: none; z-index: 10;
+      opacity: 0.7;
+    }
+
+    /* HP bar under wall */
+    .hp-track {
+      position: absolute; bottom: -40px; left: 50%;
+      transform: translateX(-50%); width: 320px; max-width: 80vw;
+      height: 20px; background: #151520; border: 2px solid #2a2a40; border-radius: 9999px;
+      overflow: hidden; box-shadow: inset 0 0 8px rgba(0,0,0,0.6);
+    }
+    .hp-fill {
+      height: 100%; width: 100%;
+      background: linear-gradient(90deg, #00ffa3, #00f0ff, #00ffa3);
+      background-size: 200% 100%;
+      animation: hpShimmer 2s linear infinite;
+      box-shadow: 0 0 15px rgba(0,240,255,0.4);
+      transition: width 0.08s linear;
+    }
+    @keyframes hpShimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .hp-text {
+      position: absolute; bottom: -68px; left: 50%;
+      transform: translateX(-50%); white-space: nowrap;
+      font-size: 12px; font-weight: 600; color: #8899aa; letter-spacing: 0.03em;
+    }
+
+    /* Current equipped tool floating near wall */
+    .equipped-tool-indicator {
+      position: absolute; top: -28px; left: 50%;
+      transform: translateX(-50%);
+      padding: 4px 12px; border-radius: 9999px;
+      background: rgba(0,0,0,0.5); border: 1.5px solid rgba(255,215,0,0.3);
+      font-family: var(--font-mono); font-size: 12px; color: var(--accent-gold);
+      pointer-events: none; z-index: 20;
+      box-shadow: 0 0 12px rgba(255,215,0,0.15);
+    }
+
+    /* ============================================
+       DAMAGE / PARTICLES OVERLAY
+       ============================================ */
+    .overlay-stage {
+      position: absolute; inset: 0; pointer-events: none; z-index: 50; overflow: hidden;
+    }
+    .damage-float {
+      position: absolute; font-family: var(--font-heading); font-weight: 700;
+      font-size: 22px; text-shadow: 0 0 10px rgba(0,0,0,0.8), 0 2px 0 rgba(255,255,255,0.15);
+      animation: floatUp 0.9s ease forwards; pointer-events: none;
+    }
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0) scale(0.8); }
+      25% { transform: translateY(-14px) scale(1.15); }
+      80% { opacity: 0.8; transform: translateY(-50px) scale(1); }
+      100% { opacity: 0; transform: translateY(-70px) scale(0.9); }
+    }
+
+    /* Particle */
+    .particle {
+      position: absolute; width: 7px; height: 7px; border-radius: 50%; pointer-events: none;
+      box-shadow: 0 0 6px currentColor;
+    }
+
+    /* Break animation overlay */
+    .wall-break-anim {
+      position: absolute; inset: 0; pointer-events: none; z-index: 60;
+      opacity: 0; animation: breakFlash 0.35s ease forwards;
+    }
+    @keyframes breakFlash {
+      0% { opacity: 1; background: radial-gradient(circle at 50% 50%, rgba(255,240,100,0.7) 0%, transparent 60%); }
+      100% { opacity: 0; }
+    }
+
+    /* ============================================
+       NAV BAR
+       ============================================ */
+    .nav-bar {
+      display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+      padding: 14px 22px; background: linear-gradient(0deg, rgba(10,10,16,0.95) 0%, rgba(12,12,20,0.9) 100%);
+      border-top: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0; z-index: 10;
+    }
+    .nav-btn {
+      padding: 10px 22px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04); color: var(--text-main);
+      font-family: var(--font-heading); font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase;
+      cursor: pointer; transition: all 0.15s ease;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(0,240,255,0.35); color: var(--accent-cyan); }
+    .nav-btn.active-nav { background: linear-gradient(135deg, rgba(0,240,255,0.15), rgba(255,0,170,0.15)); border-color: rgba(0,240,255,0.45); color: #fff; }
+
+    /* ============================================
+       PANELS (screens)
+       ============================================ */
+    .panel-screen {
+      position: fixed; inset: 0; z-index: 200; background: rgba(7,7,15,0.92);
+      backdrop-filter: blur(10px) saturate(120%);
+      display: none; flex-direction: column; overflow-y: auto; padding: 24px 20px 100px;
+      animation: panelFadeIn 0.25s ease;
+    }
+    .panel-screen.active { display: flex; }
+    @keyframes panelFadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .panel-inner { max-width: 1100px; margin: 0 auto; width: 100%; }
+    .panel-header-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-bottom: 20px; border-bottom: 2px solid rgba(255,255,255,0.08); margin-bottom: 24px;
+    }
+    .panel-header-row h2 { font-family: var(--font-heading); font-size: 28px; color: var(--text-main); letter-spacing: 0.04em; }
+    .close-btn {
+      width: 42px; height: 42px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.05); color: #fff; font-size: 20px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; transition: background 0.15s;
+    }
+    .close-btn:hover { background: rgba(255,255,255,0.12); border-color: var(--accent-cyan); color: var(--accent-cyan); }
+
+    /* ============================================
+       UPGRADE GRID
+       ============================================ */
+    .upgrade-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;
+    }
+    .upg-card {
+      background: linear-gradient(160deg, rgba(30,26,42,0.9), rgba(16,14,28,0.95));
+      border: 2px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 18px;
+      transition: all 0.18s ease; position: relative; overflow: hidden;
+    }
+    .upg-card:hover { border-color: rgba(0,240,255,0.35); transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0,240,255,0.08); }
+    .upg-card .upg-icon { font-size: 32px; margin-bottom: 8px; }
+    .upg-card h3 { font-family: var(--font-heading); font-size: 16px; letter-spacing: 0.02em; margin-bottom: 4px; }
+    .upg-card .desc { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; }
+    .upg-card .cost { font-family: var(--font-mono); font-size: 15px; color: var(--accent-gold); font-weight: 700; }
+    .upg-card button {
+      width: 100%; padding: 10px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.1);
+      background: linear-gradient(135deg, #00f0ff, #0090cc); color: #000; font-family: var(--font-heading); font-size: 13px; letter-spacing: 0.06em; cursor: pointer; transition: all 0.15s;
+    }
+    .upg-card button:hover { filter: brightness(1.15); }
+    .upg-card button:disabled { opacity: 0.35; cursor: not-allowed; filter: grayscale(1); }
+
+    /* ============================================
+       TOOLS / HELPERS / WORLDS
+       ============================================ */
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
+
+    .card-generic {
+      background: linear-gradient(165deg, rgba(30,26,42,0.88), rgba(12,10,22,0.95));
+      border: 2px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 18px; text-align: center;
+      transition: all 0.18s ease; position: relative;
+    }
+    .card-generic:hover { border-color: rgba(0,240,255,0.35); transform: translateY(-2px); }
+    .card-generic .icon-badge { font-size: 36px; margin-bottom: 8px; filter: drop-shadow(0 0 8px rgba(255,255,255,0.15)); }
+    .card-generic h4 { font-family: var(--font-heading); font-size: 15px; letter-spacing: 0.03em; margin-bottom: 4px; }
+    .card-generic .sub { font-size: 12px; color: var(--text-dim); margin-bottom: 10px; }
+    .card-generic .tag { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.04em; }
+    .tag-unlocked { background: rgba(0,255,163,0.15); color: var(--accent-green); border: 1px solid rgba(0,255,163,0.25); }
+    .tag-locked { background: rgba(255,255,255,0.06); color: var(--text-dim); border: 1px solid rgba(255,255,255,0.1); }
+    .card-generic button {
+      width: 100%; padding: 9px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.1);
+      background: linear-gradient(135deg, rgba(0,240,255,0.15), rgba(0,240,255,0.05)); color: #fff;
+      font-family: var(--font-heading); font-size: 13px; cursor: pointer; transition: all 0.15s;
+    }
+    .card-generic button:hover { background: linear-gradient(135deg, rgba(0,240,255,0.25), rgba(0,240,255,0.1)); border-color: rgba(0,240,255,0.35); }
+    .card-generic button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* World cards */
+    .world-card { text-align: center; padding: 18px 10px; border-radius: 14px; border: 2px solid rgba(255,255,255,0.08); background: linear-gradient(160deg, rgba(30,26,42,0.88), rgba(12,10,22,0.95)); transition: all 0.18s; }
+    .world-card.active { border-color: var(--accent-pink); box-shadow: 0 0 20px rgba(255,0,170,0.15); }
+    .world-card.unlocked { border-color: rgba(0,240,255,0.2); }
+    .world-card .world-color-bar { width: 100%; height: 8px; border-radius: 9999px; margin-bottom: 10px; }
+    .world-card h4 { font-family: var(--font-heading); font-size: 15px; letter-spacing: 0.04em; }
+    .world-card .world-stat { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+
+    /* ============================================
+       PRESTIGE / ACHIEVEMENTS / SETTINGS
+       ============================================ */
+    .prestige-box {
+      max-width: 520px; margin: 0 auto; text-align: center;
+      background: linear-gradient(160deg, rgba(30,26,42,0.9), rgba(16,14,28,0.95));
+      border: 2px solid rgba(255,215,0,0.2); border-radius: 20px; padding: 32px 24px;
+    }
+    .prestige-box h2 { font-family: var(--font-heading); font-size: 26px; margin-bottom: 8px; letter-spacing: 0.06em; color: var(--accent-gold); }
+    .prestige-box .prestige-desc { color: var(--text-dim); margin-bottom: 22px; line-height: 1.6; }
+    .prestige-box .prestige-reward { font-size: 32px; font-family: var(--font-mono); font-weight: 700; color: var(--accent-pink); margin-bottom: 4px; }
+    .prestige-box .prestige-sub { color: var(--text-dim); font-size: 13px; margin-bottom: 24px; }
+    .prestige-box button { padding: 16px 48px; border-radius: 12px; border: 2px solid rgba(255,215,0,0.35); background: linear-gradient(135deg, var(--accent-gold), #b8860b); color: #000; font-family: var(--font-heading); font-size: 16px; letter-spacing: 0.06em; cursor: pointer; transition: all 0.15s; box-shadow: 0 8px 30px rgba(255,215,0,0.2); }
+    .prestige-box button:hover { filter: brightness(1.15); box-shadow: 0 12px 40px rgba(255,215,0,0.3); }
+    .prestige-box .warning { margin-top: 14px; font-size: 13px; color: var(--danger); }
+
+    .achievement-row {
+      display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+      border-radius: 10px; background: linear-gradient(165deg, rgba(30,26,42,0.88), rgba(12,10,22,0.95));
+      border: 2px solid rgba(255,255,255,0.06); margin-bottom: 10px;
+      transition: border-color 0.15s;
+    }
+    .achievement-row.completed { border-color: rgba(0,255,163,0.35); background: linear-gradient(165deg, rgba(0,255,163,0.06), rgba(12,10,22,0.95)); }
+    .achievement-row .ach-icon { font-size: 26px; min-width: 36px; text-align: center; }
+    .achievement-row .ach-name { font-family: var(--font-heading); font-size: 14px; letter-spacing: 0.02em; }
+    .achievement-row .ach-desc { font-size: 12px; color: var(--text-dim); }
+    .achievement-row .ach-reward { font-family: var(--font-mono); font-size: 13px; color: var(--accent-gold); font-weight: 700; white-space: nowrap; margin-left: auto; }
+    .achievement-row .ach-check { color: var(--accent-green); font-weight: 700; font-size: 16px; }
+
+    /* Settings */
+    .settings-section { max-width: 420px; margin: 0 auto; }
+    .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .settings-row label { font-family: var(--font-heading); font-size: 15px; letter-spacing: 0.03em; }
+    .slider { width: 160px; accent-color: var(--accent-cyan); }
+    .danger-btn { width: 100%; padding: 14px; border-radius: 10px; border: 2px solid rgba(255,42,106,0.35); background: rgba(255,42,106,0.1); color: var(--danger); font-family: var(--font-heading); font-size: 14px; letter-spacing: 0.04em; cursor: pointer; transition: all 0.15s; }
+    .danger-btn:hover { background: rgba(255,42,106,0.22); border-color: var(--danger); }
+
+    /* ============================================
+       DAILY REWARD / CHEST
+       ============================================ */
+    .daily-reward-banner {
+      background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,215,0,0.03));
+      border: 2px solid rgba(255,215,0,0.25); border-radius: 16px; padding: 20px; text-align: center; margin-bottom: 24px;
+    }
+    .daily-reward-banner h3 { font-family: var(--font-heading); color: var(--accent-gold); letter-spacing: 0.06em; margin-bottom: 6px; }
+    .daily-reward-banner p { font-size: 13px; color: var(--text-dim); margin-bottom: 12px; }
+    .daily-reward-banner .timer { font-family: var(--font-mono); font-size: 13px; color: var(--accent-cyan); }
+    .daily-reward-banner button { padding: 10px 28px; border-radius: 9999px; background: linear-gradient(135deg, var(--accent-gold), #b8860b); color: #000; font-family: var(--font-heading); font-size: 14px; letter-spacing: 0.06em; border: none; cursor: pointer; transition: filter 0.15s; }
+    .daily-reward-banner button:disabled { opacity: 0.35; cursor: not-allowed; filter: grayscale(0.8); }
+
+    /* ============================================
+       TITLE SCREEN (overlay)
+       ============================================ */
+    .title-screen {
+      position: fixed; inset: 0; z-index: 500; background: linear-gradient(180deg, #07070f 0%, #0a0a18 100%);
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+      transition: opacity 0.5s ease; overflow: hidden;
+    }
+    .title-screen.hidden { opacity: 0; pointer-events: none; }
+
+    .title-art { text-align: center; }
+    .title-art h1 {
+      font-family: var(--font-heading); font-size: clamp(42px, 8vw, 80px); letter-spacing: 0.08em;
+      background: linear-gradient(135deg, #fff 20%, var(--accent-cyan) 45%, var(--accent-pink) 70%, #fff 90%);
+      background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      filter: drop-shadow(0 0 30px rgba(0,240,255,0.25));
+      animation: titleShimmer 5s ease infinite; line-height: 1.1;
+    }
+    @keyframes titleShimmer {
+      0% { background-position: 0% center; }
+      50% { background-position: 100% center; }
+      100% { background-position: 0% center; }
+    }
+    .title-art .subtitle {
+      margin-top: 12px; color: var(--text-dim); font-size: 16px; letter-spacing: 0.12em; text-transform: uppercase;
+    }
+    .title-art .tagline { margin-top: 8px; color: #6a6a8a; font-size: 14px; }
+
+    .title-btn-group { margin-top: 48px; display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+    .title-btn {
+      padding: 14px 36px; border-radius: 14px; border: 2px solid rgba(0,240,255,0.25);
+      background: rgba(0,240,255,0.06); color: var(--text-main); font-family: var(--font-heading); font-size: 16px; letter-spacing: 0.08em; cursor: pointer; transition: all 0.2s; text-transform: uppercase;
+    }
+    .title-btn:hover { background: rgba(0,240,255,0.15); border-color: rgba(0,240,255,0.6); color: #fff; box-shadow: 0 6px 24px rgba(0,240,255,0.15); }
+    .title-btn.primary { background: linear-gradient(135deg, var(--accent-cyan), #0090cc); border-color: rgba(0,240,255,0.5); color: #000; }
+    .title-btn.primary:hover { filter: brightness(1.15); }
+
+    .title-footer { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); color: #444; font-size: 11px; letter-spacing: 0.08em; }
+
+    /* ============================================
+       FLOATING REWARD TOAST
+       ============================================ */
+    .toast-msg {
+      position: fixed; top: 86px; left: 50%; transform: translateX(-50%); z-index: 600;
+      padding: 10px 26px; border-radius: 9999px; background: rgba(12,10,22,0.95); border: 2px solid rgba(255,215,0,0.3);
+      color: var(--accent-gold); font-family: var(--font-mono); font-size: 14px; font-weight: 700; letter-spacing: 0.04em;
+      pointer-events: none; opacity: 0; transition: opacity 0.3s ease, top 0.3s ease; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .toast-msg.show { opacity: 1; top: 96px; }
+
+    /* ============================================
+       MOBILE ADAPTATIONS
+       ============================================ */
+    @media (max-width: 640px) {
+      .currency-pill { font-size: 15px; padding: 5px 10px; }
+      .currency-pill .icon { font-size: 18px; }
+      .nav-btn { padding: 8px 14px; font-size: 11px; }
+      .wall-stage { width: min(340px, 78vw); height: min(340px, 78vw); }
+      .panel-header-row h2 { font-size: 22px; }
+      .grid-3 { grid-template-columns: 1fr; }
+      .grid-4 { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
 </head>
 <body>
-    <div id="game-container">
-        <!-- Top Bar -->
-        <div class="top-bar">
-            <div class="currency gold">
-                <span class="icon">🪙</span>
-                <span id="coins">0</span>
-            </div>
-            <div class="currency" style="color:#a78bfa">
-                <span class="icon">💎</span>
-                <span id="prestige-points">0</span>
-            </div>
-            <div style="display:flex; align-items:center; gap:15px; font-size:15px;">
-                <div>World: <span id="world-name">Wood</span></div>
-                <div id="wall-count">Wall 1/10</div>
-            </div>
+
+  <!-- Ambient background -->
+  <div class="ambient-bg" aria-hidden="true"><div class="grid-lines"></div></div>
+
+  <div id="app">
+    <!-- ===== HEADER ===== -->
+    <header class="game-header">
+      <div class="currency-group">
+        <div class="currency-pill gold" aria-label="Coins">
+          <span class="icon">🪙</span>
+          <span id="coins-display">0</span>
         </div>
-        
-        <!-- Main Game Area -->
-        <div class="main-area">
-            <div id="wall-container">
-                <!-- Wall -->
-                <div id="wall" onclick="tapWall(event)">
-                    <div id="wall-material" class="wall-material" style="background: linear-gradient(#8B5A2B, #5C4033);"></div>
-                    <div id="wall-cracks" class="cracks"></div>
-                    
-                    <!-- Tool visual overlay -->
-                    <div id="tool-overlay" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;">
-                        <div id="current-tool" style="font-size:92px; filter: drop-shadow(0 0 15px #fff); transition: transform 0.1s;">⛏️</div>
-                    </div>
-                    
-                    <!-- HP Bar -->
-                    <div class="wall-hp">
-                        <div id="hp-bar" class="hp-bar" style="width:100%"></div>
-                    </div>
-                    <div id="wall-label" class="wall-label">Wood Wall • 100 HP</div>
-                </div>
-            </div>
-            
-            <!-- Floating damage container -->
-            <div id="damage-container" style="position:absolute; inset:0; pointer-events:none; z-index:200;"></div>
+        <div class="currency-pill gem" aria-label="Prestige Points">
+          <span class="icon">💎</span>
+          <span id="prestige-display">0</span>
         </div>
-        
-        <!-- Bottom Navigation -->
-        <div class="nav-buttons">
-            <button onclick="showPanel('upgrades')" class="nav-btn">UPGRADES</button>
-            <button onclick="showPanel('tools')" class="nav-btn">TOOLS</button>
-            <button onclick="showPanel('worlds')" class="nav-btn">WORLDS</button>
-            <button onclick="showPanel('helpers')" class="nav-btn">HELPERS</button>
-            <button onclick="showPanel('prestige')" class="nav-btn">PRESTIGE</button>
-            <button onclick="showPanel('achievements')" class="nav-btn">ACHIEVEMENTS</button>
-            <button onclick="showPanel('settings')" class="nav-btn">SETTINGS</button>
+      </div>
+      <div class="header-meta">
+        <span>World <strong id="world-label">Wood</strong></span>
+        <span>Wall <strong id="wall-label">1</strong></span>
+        <span>Bonus <strong id="mult-label">+0%</strong></span>
+      </div>
+    </header>
+
+    <!-- ===== MAIN STAGE ===== -->
+    <main class="main-stage">
+      <section class="wall-stage" aria-label="Main wall">
+        <div class="equipped-tool-indicator" id="tool-indicator">Pickaxe</div>
+
+        <div id="wall" onclick="handleWallClick(event)" role="button" aria-label="Tap wall to damage">
+          <div id="wall-material" class="wall-face"></div>
+          <div id="crack-stage-1" class="crack-stage" aria-hidden="true"></div>
+          <div id="crack-stage-2" class="crack-stage" aria-hidden="true"></div>
+          <div id="crack-stage-3" class="crack-stage" aria-hidden="true"></div>
+          <div class="hit-flash" id="hit-flash"></div>
+          <div class="wall-center-decor" id="wall-decor">⛏️</div>
         </div>
-        
-        <!-- Panels -->
-        
-        <!-- Upgrades Panel -->
-        <div id="panel-upgrades" class="panel">
-            <div class="panel-header">
-                <h2>⚙️ Upgrades</h2>
-                <button onclick="hidePanel()" class="close-btn">×</button>
-            </div>
-            <div id="upgrade-list" class="upgrade-grid"></div>
+
+        <div class="hp-track" aria-label="Wall health">
+          <div id="hp-fill" class="hp-fill"></div>
         </div>
-        
-        <!-- Tools Panel -->
-        <div id="panel-tools" class="panel">
-            <div class="panel-header">
-                <h2>🛠️ Tools</h2>
-                <button onclick="hidePanel()" class="close-btn">×</button>
-            </div>
-            <div id="tools-list" class="helper-grid"></div>
-        </div>
-        
-        <!-- Worlds Panel -->
-        <div id="panel-worlds" class="panel">
-            <div class="panel-header">
-                <h2>🌍 Worlds</h2>
-                <button onclick="hidePanel()" class="close-btn">×</button>
-            </div>
-            <div id="worlds-list" class="world-list"></div>
-        </div>
-        
-        <!-- Helpers Panel -->
-        <div id="panel-helpers" class="panel">
-            <div class="panel-header">
-                <h2>🤖 Helpers</h2>
-                <button onclick="hidePanel()" class="close-btn">×</button>
-            </div>
-            <div id="helpers-list" class="helper-grid"></div>
-        </div>
-        
-        <!-- Prestige Panel -->
-        <div id="panel-prestige" class="panel">
-            <div class="panel-header">
-                <h2>✨ Prestige</h2>
-                <button onclick="hidePanel()" class="close-btn">×</button>
-            </div>
-            <div style="max-width:520px; margin:0 auto; text-align:center;">
-                <div style="font-size:18px; margin:20px 0; line-height:1.4;">
-                    Reset all progress and earn <span id="prestige-gain" style="color:#a78bfa; font-weight:800;">0</span> Prestige Points.<br>
-                    Each point gives a permanent <span style="color:#ffd700">+10%</span> damage multiplier.
-                </div>
-                <div style="margin:25px 0;">
-                    <button onclick="prestigeReset()" style="padding:16px 48px; font-size:20px; background:#a78bfa; color:#000; border:none; border-radius:12px; font-weight:800;">PRESTIGE NOW</button>
-                </div>
-                <div style="font-size:15px; color:#888;">Current bonus: <span id="prestige-bonus">+0%</span></div>
-            </div>
-        </div>
-        
-        <!-- Achievements Panel -->
-        <div id="panel-achievements" class="panel">
-            <div class="panel-header">
-                <h2>🏆 Achievements</h2>
-                <button onclick="hidePanel()" class="close-btn">×</button>
-            </div>
-            <div id="achievements-list"></div>
-        </div>
-        
-        <!-- Settings Panel -->
-        <div id="panel-settings" class="panel">
-            <div class="panel-header">
-                <h2>⚙️ Settings</h2>
-                <button onclick="hidePanel()" class="close-btn">×</button>
-            </div>
-            <div style="max-width:380px; margin:0 auto;">
-                <div style="margin:20px 0;">
-                    <label style="display:block; margin-bottom:8px;">Sound</label>
-                    <input type="range" id="sound-vol" min="0" max="1" step="0.1" value="0.6" style="width:100%">
-                </div>
-                <div style="margin:20px 0;">
-                    <label style="display:block; margin-bottom:8px;">Music</label>
-                    <input type="range" id="music-vol" min="0" max="1" step="0.1" value="0.4" style="width:100%">
-                </div>
-                <div style="margin-top:40px;">
-                    <button onclick="resetSave()" style="background:#c33; color:white; padding:12px 30px; border:none; border-radius:8px; width:100%;">RESET ALL PROGRESS</button>
-                </div>
-            </div>
-        </div>
+        <div class="hp-text" id="hp-text">100 / 100 HP</div>
+      </section>
+
+      <!-- Floating overlay for particles & damage numbers -->
+      <div class="overlay-stage" id="overlay-stage" aria-hidden="true"></div>
+    </main>
+
+    <!-- ===== NAVIGATION ===== -->
+    <nav class="nav-bar" aria-label="Game screens">
+      <button onclick="openPanel('upgrades')" class="nav-btn">Upgrades</button>
+      <button onclick="openPanel('tools')" class="nav-btn">Tools</button>
+      <button onclick="openPanel('worlds')" class="nav-btn">Worlds</button>
+      <button onclick="openPanel('helpers')" class="nav-btn">Helpers</button>
+      <button onclick="openPanel('prestige')" class="nav-btn">Prestige</button>
+      <button onclick="openPanel('achievements')" class="nav-btn">Achievements</button>
+      <button onclick="openPanel('settings')" class="nav-btn">Settings</button>
+      <button onclick="openPanel('daily')" class="nav-btn">Daily</button>
+    </nav>
+  </div>
+
+  <!-- ===== PANELS ===== -->
+  <section id="panel-upgrades" class="panel-screen" aria-label="Upgrades screen">
+    <div class="panel-inner">
+      <div class="panel-header-row">
+        <h2>⚙️ Upgrades</h2>
+        <button onclick="closePanel()" class="close-btn" aria-label="Close">×</button>
+      </div>
+      <div id="upgrade-grid" class="upgrade-grid"></div>
     </div>
-    
-    <script>
-        // ==================== GAME STATE ====================
-        let game = {
-            coins: 0,
-            prestigePoints: 0,
-            prestigeMultiplier: 1,
-            
-            // Damage stats
-            tapDamage: 1,
-            autoDamage: 0,
-            critChance: 5,
-            critDamage: 2.5,
-            attackSpeed: 1,
-            coinBonus: 1,
-            offlineBonus: 1,
-            
-            // Progress
-            currentWorld: 0,
-            currentWallIndex: 0,
-            wallsBroken: 0,
-            
-            // Unlocks
-            unlockedTools: [0],
-            unlockedHelpers: [],
-            
-            // Upgrades owned
-            upgrades: {},
-            
-            // Helpers owned
-            helpers: {},
-            
-            // Achievements
-            achievements: {},
-            
-            // Timers
-            lastSave: Date.now(),
-            lastOffline: Date.now(),
-            
-            // Settings
-            soundEnabled: true,
-            musicEnabled: true
+  </section>
+
+  <section id="panel-tools" class="panel-screen" aria-label="Tools screen">
+    <div class="panel-inner">
+      <div class="panel-header-row">
+        <h2>🛠️ Tools</h2>
+        <button onclick="closePanel()" class="close-btn" aria-label="Close">×</button>
+      </div>
+      <div id="tools-grid" class="grid-3"></div>
+    </div>
+  </section>
+
+  <section id="panel-worlds" class="panel-screen" aria-label="Worlds screen">
+    <div class="panel-inner">
+      <div class="panel-header-row">
+        <h2>🌍 Worlds</h2>
+        <button onclick="closePanel()" class="close-btn" aria-label="Close">×</button>
+      </div>
+      <div id="worlds-grid" class="grid-4"></div>
+    </div>
+  </section>
+
+  <section id="panel-helpers" class="panel-screen" aria-label="Helpers screen">
+    <div class="panel-inner">
+      <div class="panel-header-row">
+        <h2>🤖 Helpers</h2>
+        <button onclick="closePanel()" class="close-btn" aria-label="Close">×</button>
+      </div>
+      <div id="helpers-grid" class="grid-3"></div>
+    </div>
+  </section>
+
+  <section id="panel-prestige" class="panel-screen" aria-label="Prestige screen">
+    <div class="panel-inner">
+      <div class="panel-header-row">
+        <h2>✨ Prestige</h2>
+        <button onclick="closePanel()" class="close-btn" aria-label="Close">×</button>
+      </div>
+      <div class="prestige-box">
+        <h2>RESTART THE WORLD</h2>
+        <div class="prestige-desc">
+          Reset your walls, upgrades, and coins.<br />
+          Earn permanent prestige points for a stronger start.
+        </div>
+        <div class="prestige-reward">+<span id="prestige-gain">0</span> Points</div>
+        <div class="prestige-sub">Each point grants <span style="color:var(--accent-gold);font-weight:700">+10%</span> permanent damage</div>
+        <button onclick="performPrestige()">PRESTIGE NOW</button>
+        <div class="prestige-sub" style="margin-top:14px;">Current multiplier: <strong style="color:var(--accent-cyan)">+<span id="prestige-mult">0</span>%</strong></div>
+        <div class="warning" id="prestige-warning">Reach at least 1 point to prestige.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-achievements" class="panel-screen" aria-label="Achievements screen">
+    <div class="panel-inner">
+      <div class="panel-header-row">
+        <h2>🏆 Achievements</h2>
+        <button onclick="closePanel()" class="close-btn" aria-label="Close">×</button>
+      </div>
+      <div id="achievements-grid"></div>
+    </div>
+  </section>
+
+  <section id="panel-settings" class="panel-screen" aria-label="Settings screen">
+    <div class="panel-inner">
+      <div class="panel-header-row">
+        <h2>⚙️ Settings</h2>
+        <button onclick="closePanel()" class="close-btn" aria-label="Close">×</button>
+      </div>
+      <div class="settings-section">
+        <div class="settings-row">
+          <label for="vol-sfx">Sound Effects</label>
+          <input type="range" id="vol-sfx" class="slider" min="0" max="1" step="0.1" value="0.7" oninput="updateSfxVolume(this.value)" />
+        </div>
+        <div class="settings-row">
+          <label for="vol-music">Ambient Music</label>
+          <input type="range" id="vol-music" class="slider" min="0" max="1" step="0.1" value="0.3" oninput="updateMusicVolume(this.value)" />
+        </div>
+        <div class="settings-row">
+          <label>Data</label>
+          <span style="font-family:var(--font-mono);font-size:13px;color:#666;">Auto-saved</span>
+        </div>
+        <div style="margin-top:24px;"></div>
+        <button onclick="resetSave()" class="danger-btn">RESET ALL PROGRESS</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-daily" class="panel-screen" aria-label="Daily reward screen">
+    <div class="panel-inner">
+      <div class="panel-header-row">
+        <h2>🎁 Daily Chest</h2>
+        <button onclick="closePanel()" class="close-btn" aria-label="Close">×</button>
+      </div>
+      <div class="daily-reward-banner" id="daily-banner">
+        <h3>Daily Reward Ready!</h3>
+        <p>Claim your free coins and prestige boost.</p>
+        <button onclick="claimDaily()" id="daily-btn">CLAIM REWARD</button>
+        <div class="timer" id="daily-timer">Next in: 0h 0m</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FLOATING TOAST ===== -->
+  <div id="toast-msg" class="toast-msg" aria-live="polite"></div>
+
+  <!-- ===== TITLE SCREEN ===== -->
+  <div id="title-screen" class="title-screen" aria-label="Title screen">
+    <div class="ambient-bg" aria-hidden="true"><div class="grid-lines"></div></div>
+    <div class="title-art">
+      <h1>IDLE WALL DESTROYER</h1>
+      <p class="subtitle">PREMIUM IDLE DESTROYER</p>
+      <p class="tagline">Break walls. Earn coins. Upgrade. Prestige. Repeat.</p>
+    </div>
+    <div class="title-btn-group">
+      <button onclick="startGame()" class="title-btn primary">START GAME</button>
+      <button onclick="loadSaveAndStart()" class="title-btn">LOAD SAVE</button>
+    </div>
+    <div class="title-footer">No external links · No ads · Original game</div>
+  </div>
+
+  <script>
+  // ============================================
+  // IDLE WALL DESTROYER — GAME ENGINE
+  // ============================================
+
+  /* ---------- GAME STATE ---------- */
+  const state = {
+    coins: 0,
+    prestigePoints: 0,
+    prestigeMultiplier: 1,
+
+    tapDamage: 1,
+    autoDamage: 0,
+    critChance: 5,
+    critDamage: 2.5,
+    coinBonus: 1,
+    offlineBonus: 1,
+    attackSpeed: 1,
+
+    currentWorld: 0,
+    currentWallIndex: 0,
+    wallsBroken: 0,
+
+    unlockedTools: [0],
+    unlockedHelpers: [],
+    upgrades: {},
+    helpers: {},
+    achievements: {},
+
+    lastSave: Date.now(),
+    lastOffline: Date.now(),
+
+    sfxVolume: 0.7,
+    musicVolume: 0.3,
+
+    dailyClaimed: 0, // timestamp
+    dailyNextAvailable: Date.now(),
+    dailyStreak: 1,
+  };
+
+  /* ---------- GAME DATA ---------- */
+  const WORLDS = [
+    { name: "Wood",        color: "#8B5A2B", colorLight: "#c08050", hpBase: 120,   reward: 18  },
+    { name: "Stone",       color: "#777777", colorLight: "#a0a0b0", hpBase: 520,   reward: 75  },
+    { name: "Metal",       color: "#666677", colorLight: "#8899aa", hpBase: 2400,  reward: 310 },
+    { name: "Ice",         color: "#88ccff", colorLight: "#cceeff", hpBase: 11000, reward: 1450 },
+    { name: "Neon",        color: "#ff00aa", colorLight: "#ffaa66", hpBase: 52000, reward: 5900 },
+    { name: "Lava",        color: "#ff5500", colorLight: "#ffaa77", hpBase: 240000, reward: 23000 },
+    { name: "Crystal",     color: "#55ffaa", colorLight: "#ccffee", hpBase: 1200000, reward: 98000 },
+    { name: "Boss",        color: "#9900ff", colorLight: "#cc66ff", hpBase: 6500000, reward: 420000 },
+  ];
+
+  const TOOLS = [
+    { id: 0, name: "Pickaxe", icon: "⛏️", mult: 1.0,  cost: 0 },
+    { id: 1, name: "Drill", icon: "🛠️", mult: 2.4,  cost: 500 },
+    { id: 2, name: "Hammer", icon: "🔨", mult: 6.2,  cost: 2600 },
+    { id: 3, name: "Sledgehammer", icon: "🪓", mult: 14.5, cost: 13500 },
+    { id: 4, name: "Laser Cutter", icon: "🔦", mult: 36,   cost: 72000 },
+    { id: 5, name: "Plasma Drill", icon: "⚡", mult: 92, cost: 360000 },
+    { id: 6, name: "Bomb Launcher", icon: "💣", mult: 240, cost: 1800000 },
+    { id: 7, name: "Orbital Ray", icon: "🌌", mult: 620, cost: 9500000 },
+  ];
+
+  const HELPERS = [
+    { id: 0, name: "Drone", icon: "🚁", baseDmg: 2,  cost: 200,  desc: "+2 auto damage" },
+    { id: 1, name: "Auto Hammer", icon: "🔨", baseDmg: 9,  cost: 1200, desc: "+9 auto damage" },
+    { id: 2, name: "Laser Turret", icon: "🔫", baseDmg: 40, cost: 6800, desc: "+40 auto damage" },
+    { id: 3, name: "Mini Bot", icon: "🤖", baseDmg: 160, cost: 31000, desc: "+160 auto damage" },
+  ];
+
+  const UPGRADES = [
+    { id: "tap",    name: "Tap Damage",    desc: "+1 tap damage", baseCost: 35,  effect: () => state.tapDamage += 1 },
+    { id: "auto",   name: "Auto Damage",    desc: "+2 auto damage", baseCost: 95,  effect: () => state.autoDamage += 2 },
+    { id: "crit",   name: "Crit Chance",    desc: "+4% crit chance", baseCost: 260, effect: () => state.critChance = Math.min(75, state.critChance + 4) },
+    { id: "critdmg", name: "Crit Damage",  desc: "+0.6x crit multiplier", baseCost: 620, effect: () => state.critDamage += 0.6 },
+    { id: "speed",  name: "Attack Speed",   desc: "+15% faster hits", baseCost: 1300, effect: () => state.attackSpeed = Math.min(5, state.attackSpeed + 0.15) },
+    { id: "coin",   name: "Coin Bonus",     desc: "+25% coin gain", baseCost: 2400, effect: () => state.coinBonus += 0.25 },
+    { id: "offline", name: "Offline Income", desc: "+35% idle earnings", baseCost: 4800, effect: () => state.offlineBonus += 0.35 },
+    { id: "helper", name: "Helper Power",   desc: "+25% helper damage", baseCost: 9500, effect: () => { /* handled in helper calc */ } },
+  ];
+
+  const ACHIEVEMENTS = [
+    { id: "w10",  name: "Breaker", desc: "Break 10 walls", goal: 10, type: "walls", reward: 250 },
+    { id: "w100", name: "Demolisher", desc: "Break 100 walls", goal: 100, type: "walls", reward: 1400 },
+    { id: "w500", name: "Engineer", desc: "Break 500 walls", goal: 500, type: "walls", reward: 8500 },
+    { id: "w2k",  name: "Architect", desc: "Break 2000 walls", goal: 2000, type: "walls", reward: 42000 },
+    { id: "world3", name: "Explorer", desc: "Reach world 3", goal: 3, type: "world", reward: 800 },
+    { id: "world6", name: "Conqueror", desc: "Reach world 6", goal: 6, type: "world", reward: 5500 },
+    { id: "prestige1", name: "Reborn", desc: "Prestige once", goal: 1, type: "prestige", reward: 3200 },
+    { id: "prestige3", name: "Ascended", desc: "Prestige 3 times", goal: 3, type: "prestige", reward: 18000 },
+    { id: "upgrades15", name: "Investor", desc: "Buy 15 upgrades", goal: 15, type: "upgrades", reward: 1100 },
+    { id: "upgrades50", name: "Magnate", desc: "Buy 50 upgrades", goal: 50, type: "upgrades", reward: 9800 },
+    { id: "coins1m", name: "Millionaire", desc: "Own 1,000,000 coins", goal: 1000000, type: "coins", reward: 12000 },
+    { id: "coins10m", name: "Billionaire", desc: "Own 10,000,000 coins", goal: 10000000, type: "coins", reward: 65000 },
+  ];
+
+  /* ---------- CURRENT WALL DATA ---------- */
+  let currentHP = 100;
+  let currentMaxHP = 100;
+  let lastTime = Date.now();
+  let autoInterval = null;
+  let gameStarted = false;
+
+  /* ---------- AUDIO ENGINE (Web Audio) ---------- */
+  let audioCtx = null;
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+  function playTone(freq, type = "triangle", durationMs = 120, gainVal = 0.15) {
+    try {
+      const ctx = getAudioCtx();
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      g.gain.setValueAtTime(gainVal * state.sfxVolume, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + durationMs / 1000);
+      osc.connect(g); g.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + durationMs / 1000);
+    } catch (e) {}
+  }
+  function soundHit(isCrit = false) {
+    const base = isCrit ? 880 : 320;
+    playTone(base + Math.random() * 200, isCrit ? "square" : "sawtooth", 100, 0.18);
+  }
+  function soundBreak() {
+    playTone(180, "triangle", 300, 0.15);
+    setTimeout(() => playTone(360, "sine", 200, 0.1), 80);
+    setTimeout(() => playTone(720, "sine", 200, 0.08), 160);
+  }
+  function soundBuy() {
+    playTone(520, "sine", 150, 0.12);
+    setTimeout(() => playTone(780, "triangle", 120, 0.08), 70);
+  }
+  function soundPrestige() {
+    [220, 330, 440, 550, 660, 880].forEach((f, i) => {
+      setTimeout(() => playTone(f, "sine", 220, 0.1), i * 60);
+    });
+  }
+  function soundDaily() {
+    [440, 554, 659, 880].forEach((f, i) => setTimeout(() => playTone(f, "triangle", 140, 0.12), i * 50));
+  }
+
+  /* ---------- UTILS ---------- */
+  function fmt(n) { return Math.floor(n).toLocaleString("en-US"); }
+  function fmtShort(n) {
+    if (n < 1000) return Math.floor(n);
+    if (n < 1e6) return (n / 1e3).toFixed(1) + "K";
+    if (n < 1e9) return (n / 1e6).toFixed(1) + "M";
+    return (n / 1e9).toFixed(1) + "B";
+  }
+
+  /* ---------- WALL LOGIC ---------- */
+  function getCurrentWallData() {
+    const w = WORLDS[state.currentWorld];
+    const wallNum = state.currentWallIndex + 1;
+    const hp = Math.floor(w.hpBase * Math.pow(1.65, state.currentWallIndex));
+    return { world: w, hp, reward: Math.floor(w.reward * Math.pow(1.35, state.currentWallIndex)) };
+  }
+
+  function setupWall() {
+    const d = getCurrentWallData();
+    currentMaxHP = d.hp;
+    currentHP = d.hp;
+
+    document.getElementById("world-label").textContent = d.world.name;
+    document.getElementById("wall-label").textContent = (state.currentWallIndex + 1) + "/10";
+    document.getElementById("wall-material").style.background = `linear-gradient(135deg, ${d.world.color}, #1a1a20)`;
+    document.getElementById("hp-text").textContent = fmt(currentHP) + " / " + fmt(currentMaxHP) + " HP";
+
+    updateCracks();
+    updateHPBar();
+
+    // Reset wall visual state
+    const wall = document.getElementById("wall");
+    wall.style.transition = "none";
+    wall.style.transform = "scale(0.85) rotate(-2deg)";
+    wall.style.opacity = "0";
+    setTimeout(() => {
+      wall.style.transition = "transform 0.35s ease, opacity 0.3s ease";
+      wall.style.transform = "scale(1) rotate(0deg)";
+      wall.style.opacity = "1";
+    }, 30);
+  }
+
+  function updateHPBar() {
+    const pct = Math.max(0, Math.min(100, (currentHP / currentMaxHP) * 100));
+    document.getElementById("hp-fill").style.width = pct + "%";
+  }
+
+  function updateCracks() {
+    const pct = currentHP / currentMaxHP;
+    const stages = document.querySelectorAll(".crack-stage");
+    stages.forEach((s, i) => {
+      const threshold = [0.75, 0.45, 0.2][i];
+      s.classList.toggle("active", pct <= threshold);
+    });
+  }
+
+  function damageWall(amount, isTap = false, clickX = null, clickY = null) {
+    if (!gameStarted) return;
+    if (currentHP <= 0) return;
+
+    let dmg = Math.floor(amount);
+    let isCrit = false;
+
+    if (isTap) {
+      if (Math.random() * 100 < state.critChance) {
+        dmg = Math.floor(dmg * state.critDamage);
+        isCrit = true;
+      }
+    }
+
+    currentHP = Math.max(0, currentHP - dmg);
+    updateHPBar();
+    updateCracks();
+    document.getElementById("hp-text").textContent = fmt(currentHP) + " / " + fmt(currentMaxHP) + " HP";
+
+    // Hit flash
+    const flash = document.getElementById("hit-flash");
+    flash.style.opacity = isCrit ? "0.9" : "0.45";
+    setTimeout(() => { flash.style.opacity = "0"; }, 60);
+
+    // Damage number
+    const overlay = document.getElementById("overlay-stage");
+    const el = document.createElement("div");
+    el.className = "damage-float";
+    el.style.color = isCrit ? "#ff00aa" : "#fff";
+    el.style.fontSize = isCrit ? "30px" : "22px";
+    el.style.left = (clickX ? (clickX - overlay.getBoundingClientRect().left) : 50 + Math.random() * 140) + "px";
+    el.style.top = (clickY ? (clickY - overlay.getBoundingClientRect().top) : 160 + Math.random() * 100) + "px";
+    el.textContent = fmt(dmg);
+    overlay.appendChild(el);
+    setTimeout(() => el.remove(), 900);
+
+    // Particles
+    spawnParticles(isCrit ? 10 : 5, isCrit);
+    soundHit(isCrit);
+
+    // Break
+    if (currentHP <= 0) {
+      breakWall();
+    }
+  }
+
+  function spawnParticles(count, bright = false) {
+    const overlay = document.getElementById("overlay-stage");
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement("div");
+      p.className = "particle";
+      const cx = 180 + Math.random() * 80;
+      const cy = 160 + Math.random() * 140;
+      p.style.left = cx + "px";
+      p.style.top = cy + "px";
+      p.style.background = bright ? "#ffd700" : "#fff";
+      p.style.color = bright ? "#ffd700" : (Math.random() > 0.5 ? "#00f0ff" : "#ff00aa");
+      overlay.appendChild(p);
+
+      const angle = Math.random() * Math.PI * 2;
+      const velocity = 2 + Math.random() * 4;
+      let life = 0;
+      const anim = setInterval(() => {
+        life += 1;
+        if (life > 30) { clearInterval(anim); p.remove(); return; }
+        p.style.left = (cx + Math.cos(angle) * velocity * life) + "px";
+        p.style.top = (cy + Math.sin(angle) * velocity * life + life * 0.3) + "px";
+        p.style.opacity = 1 - life / 30;
+      }, 16);
+    }
+  }
+
+  function handleWallClick(e) {
+    if (!gameStarted) return;
+    const rect = document.getElementById("wall").getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+
+    const toolMult = TOOLS[state.unlockedTools[state.unlockedTools.length - 1]]?.mult || 1;
+    const dmg = Math.floor(state.tapDamage * state.prestigeMultiplier * toolMult);
+    damageWall(dmg, true, x, y);
+  }
+
+  function breakWall() {
+    const d = getCurrentWallData();
+    const reward = Math.floor(d.reward * state.coinBonus);
+
+    state.coins += reward;
+    state.wallsBroken++;
+
+    // Break animation
+    const overlay = document.getElementById("overlay-stage");
+    const flash = document.createElement("div");
+    flash.className = "wall-break-anim";
+    overlay.appendChild(flash);
+    setTimeout(() => flash.remove(), 350);
+
+    spawnParticles(28, true);
+    soundBreak();
+
+    // Reward toast
+    showToast("+" + fmtShort(reward) + " coins!");
+
+    // Progress
+    setTimeout(() => {
+      state.currentWallIndex++;
+      if (state.currentWallIndex >= 10) {
+        if (state.currentWorld < WORLDS.length - 1) {
+          state.currentWorld++;
+          state.currentWallIndex = 0;
+        } else {
+          state.currentWallIndex = 8;
+        }
+      }
+      setupWall();
+      checkAchievements();
+      updateUI();
+      saveProgress();
+    }, 550);
+  }
+
+  /* ---------- AUTO DAMAGE ---------- */
+  function startAutoDamage() {
+    if (autoInterval) clearInterval(autoInterval);
+    autoInterval = setInterval(() => {
+      if (!gameStarted) return;
+      if (currentHP <= 0) return;
+      if (state.autoDamage > 0) {
+        const baseAuto = state.autoDamage * state.prestigeMultiplier;
+        let helperBonus = 0;
+        Object.entries(state.helpers).forEach(([id, count]) => {
+          const h = HELPERS[parseInt(id)];
+          if (h) helperBonus += h.baseDmg * count;
+        });
+        const total = Math.floor(baseAuto + helperBonus * state.prestigeMultiplier);
+        if (total > 0) damageWall(total, false);
+      }
+    }, 300);
+  }
+
+  /* ---------- UPGRADES ---------- */
+  function renderUpgrades() {
+    const grid = document.getElementById("upgrade-grid");
+    grid.innerHTML = "";
+    UPGRADES.forEach(upg => {
+      const level = state.upgrades[upg.id] || 0;
+      const cost = Math.floor(upg.baseCost * Math.pow(1.65, level));
+      const card = document.createElement("div");
+      card.className = "upg-card";
+      card.innerHTML = `
+        <div class="upg-icon">${getUpgradeIcon(upg.id)}</div>
+        <h3>${upg.name} <span style="font-size:12px;opacity:0.5">Lv ${level}</span></h3>
+        <div class="desc">${upg.desc}</div>
+        <div class="cost">🪙 ${fmtShort(cost)}</div>
+        <button onclick="buyUpgrade('${upg.id}', this)" ${state.coins < cost ? "disabled" : ""}>BUY</button>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  function getUpgradeIcon(id) {
+    const map = { tap: "✊", auto: "⚡", crit: "🎯", critdmg: "💥", speed: "⚡", coin: "💰", offline: "💤", helper: "🤖" };
+    return map[id] || "⭐";
+  }
+
+  function buyUpgrade(id, btn) {
+    const upg = UPGRADES.find(u => u.id === id);
+    const level = state.upgrades[id] || 0;
+    const cost = Math.floor(upg.baseCost * Math.pow(1.65, level));
+    if (state.coins < cost) return;
+    state.coins -= cost;
+    state.upgrades[id] = level + 1;
+    upg.effect();
+    soundBuy();
+    renderUpgrades();
+    updateUI();
+    checkAchievements();
+    saveProgress();
+  }
+
+  /* ---------- TOOLS ---------- */
+  function renderTools() {
+    const grid = document.getElementById("tools-grid");
+    grid.innerHTML = "";
+    TOOLS.forEach((t, i) => {
+      const unlocked = state.unlockedTools.includes(i);
+      const card = document.createElement("div");
+      card.className = "card-generic";
+      card.innerHTML = `
+        <div class="icon-badge">${t.icon}</div>
+        <h4>${t.name}</h4>
+        <div class="sub">${t.mult}x damage multiplier</div>
+        <span class="tag ${unlocked ? "tag-unlocked" : "tag-locked"}">${unlocked ? "EQUIPPED" : "LOCKED"}</span>
+        <button onclick="unlockTool(${i}, this)" ${unlocked ? "disabled" : ""}>${unlocked ? "UNLOCKED" : fmtShort(t.cost) + " coins"}</button>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  function unlockTool(index, btn) {
+    const t = TOOLS[index];
+    if (state.coins < t.cost) return;
+    state.coins -= t.cost;
+    state.unlockedTools.push(index);
+    document.getElementById("tool-indicator").textContent = t.name;
+    document.getElementById("wall-decor").textContent = t.icon;
+    soundBuy();
+    renderTools();
+    updateUI();
+    saveProgress();
+  }
+
+  /* ---------- WORLDS ---------- */
+  function renderWorlds() {
+    const grid = document.getElementById("worlds-grid");
+    grid.innerHTML = "";
+    WORLDS.forEach((w, i) => {
+      const unlocked = i <= state.currentWorld;
+      const current = i === state.currentWorld;
+      const card = document.createElement("div");
+      card.className = "world-card " + (current ? "active" : unlocked ? "unlocked" : "");
+      card.innerHTML = `
+        <div class="world-color-bar" style="background: linear-gradient(90deg, ${w.color}, ${w.colorLight});"></div>
+        <h4>${w.name}</h4>
+        <div class="world-stat">HP: ${fmtShort(w.hpBase)}</div>
+        <div class="world-stat">Reward: ${fmtShort(w.reward)}</div>
+        <div style="margin-top:8px; font-size:12px; color:#777;">${current ? "CURRENT" : unlocked ? "UNLOCKED" : "LOCKED"}</div>
+      `;
+      if (unlocked) {
+        card.onclick = () => {
+          state.currentWorld = i;
+          state.currentWallIndex = 0;
+          setupWall();
+          renderWorlds();
+          closePanel();
         };
-        
-        // ==================== GAME DATA ====================
-        const worlds = [
-            { name: "Wood", color: "#8B5A2B", hpBase: 100, reward: 15 },
-            { name: "Stone", color: "#666666", hpBase: 450, reward: 60 },
-            { name: "Metal", color: "#555577", hpBase: 2200, reward: 240 },
-            { name: "Ice", color: "#aaddff", hpBase: 10500, reward: 1100 },
-            { name: "Neon", color: "#ff00cc", hpBase: 52000, reward: 4800 },
-            { name: "Lava", color: "#ff6600", hpBase: 240000, reward: 19000 },
-            { name: "Crystal", color: "#88ffcc", hpBase: 1250000, reward: 85000 },
-            { name: "Boss", color: "#9900ff", hpBase: 6500000, reward: 400000 }
-        ];
-        
-        const tools = [
-            { id: 0, name: "Pickaxe", icon: "⛏️", damageMult: 1.0, cost: 0 },
-            { id: 1, name: "Drill", icon: "🛠️", damageMult: 2.2, cost: 450 },
-            { id: 2, name: "Hammer", icon: "🔨", damageMult: 5.5, cost: 2400 },
-            { id: 3, name: "Sledgehammer", icon: "🪓", damageMult: 13, cost: 12500 },
-            { id: 4, name: "Laser Cutter", icon: "🔦", damageMult: 32, cost: 68000 },
-            { id: 5, name: "Plasma Drill", icon: "⚡", damageMult: 85, cost: 340000 },
-            { id: 6, name: "Bomb Launcher", icon: "💣", damageMult: 220, cost: 1700000 }
-        ];
-        
-        const helpersData = [
-            { id: 0, name: "Drone", icon: "🚁", baseDamage: 2, cost: 180, owned: 0 },
-            { id: 1, name: "Auto Hammer", icon: "🔨", baseDamage: 8, cost: 1100, owned: 0 },
-            { id: 2, name: "Laser Turret", icon: "🔫", baseDamage: 35, cost: 6200, owned: 0 },
-            { id: 3, name: "Mini Bot", icon: "🤖", baseDamage: 140, cost: 29000, owned: 0 }
-        ];
-        
-        const upgradesData = [
-            { id: "tap", name: "Tap Damage", desc: "+1 tap damage", baseCost: 35, effect: () => game.tapDamage += 1 },
-            { id: "auto", name: "Auto Damage", desc: "+2 auto damage", baseCost: 95, effect: () => game.autoDamage += 2 },
-            { id: "crit", name: "Crit Chance", desc: "+4% crit chance", baseCost: 250, effect: () => game.critChance = Math.min(65, game.critChance + 4) },
-            { id: "critdmg", name: "Crit Damage", desc: "+0.6x crit damage", baseCost: 580, effect: () => game.critDamage += 0.6 },
-            { id: "speed", name: "Attack Speed", desc: "+15% attack speed", baseCost: 1200, effect: () => game.attackSpeed = Math.min(4, game.attackSpeed + 0.15) },
-            { id: "coin", name: "Coin Bonus", desc: "+25% coin gain", baseCost: 2100, effect: () => game.coinBonus += 0.25 },
-            { id: "offline", name: "Offline Income", desc: "+35% offline earnings", baseCost: 4200, effect: () => game.offlineBonus += 0.35 },
-            { id: "helper", name: "Helper Power", desc: "+25% helper damage", baseCost: 8500, effect: () => {} }
-        ];
-        
-        const achievementList = [
-            { id: "walls10", name: "Wall Breaker", desc: "Break 10 walls", goal: 10, type: "walls", reward: 200 },
-            { id: "walls100", name: "Demolition Expert", desc: "Break 100 walls", goal: 100, type: "walls", reward: 1200 },
-            { id: "world3", name: "World Explorer", desc: "Reach World 3", goal: 3, type: "world", reward: 650 },
-            { id: "prestige1", name: "Reborn", desc: "Prestige once", goal: 1, type: "prestige", reward: 2500 },
-            { id: "upgrades15", name: "Upgrader", desc: "Buy 15 upgrades", goal: 15, type: "upgrades", reward: 800 },
-            { id: "coins1m", name: "Millionaire", desc: "Earn 1,000,000 coins", goal: 1000000, type: "coins", reward: 4500 }
-        ];
-        
-        let currentWallHP = 0;
-        let currentWallMaxHP = 0;
-        let lastTime = Date.now();
-        let autoDamageInterval = null;
-        
-        // ==================== UTILITY FUNCTIONS ====================
-        function formatNumber(num) {
-            if (num < 1000) return Math.floor(num);
-            if (num < 1000000) return (num / 1000).toFixed(1) + "K";
-            if (num < 1000000000) return (num / 1000000).toFixed(1) + "M";
-            return (num / 1000000000).toFixed(1) + "B";
-        }
-        
-        function playSound(type) {
-            if (!game.soundEnabled) return;
-            
-            // Simple Web Audio API sounds
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                
-                if (type === "hit") {
-                    oscillator.type = "sawtooth";
-                    oscillator.frequency.value = 120 + Math.random() * 80;
-                    gain.gain.value = 0.3;
-                    setTimeout(() => { gain.gain.value = 0; }, 80);
-                } else if (type === "break") {
-                    oscillator.type = "square";
-                    oscillator.frequency.value = 60;
-                    gain.gain.value = 0.6;
-                    setTimeout(() => { gain.gain.value = 0; }, 300);
-                } else if (type === "buy") {
-                    oscillator.type = "sine";
-                    oscillator.frequency.value = 680;
-                    gain.gain.value = 0.25;
-                    setTimeout(() => { gain.gain.value = 0; }, 120);
-                }
-                
-                const filter = audioCtx.createBiquadFilter();
-                filter.type = "lowpass";
-                filter.frequency.value = 1200;
-                
-                oscillator.connect(filter);
-                filter.connect(gain);
-                gain.connect(audioCtx.destination);
-                
-                oscillator.start();
-                setTimeout(() => oscillator.stop(), 400);
-            } catch(e) {}
-        }
-        
-        function createParticles(x, y, count = 12) {
-            const container = document.getElementById("damage-container");
-            
-            for (let i = 0; i < count; i++) {
-                const p = document.createElement("div");
-                p.className = "particle";
-                p.style.left = `${x + (Math.random() - 0.5) * 80}px`;
-                p.style.top = `${y + (Math.random() - 0.5) * 80}px`;
-                p.style.background = `hsl(${Math.random() * 40 + 20}, 100%, 80%)`;
-                
-                container.appendChild(p);
-                
-                const angle = Math.random() * Math.PI * 2;
-                const velocity = 1.4 + Math.random() * 3.2;
-                
-                let life = 0;
-                const anim = setInterval(() => {
-                    life += 1;
-                    if (life > 26) {
-                        clearInterval(anim);
-                        p.remove();
-                        return;
-                    }
-                    p.style.left = `${parseFloat(p.style.left) + Math.cos(angle) * velocity}px`;
-                    p.style.top = `${parseFloat(p.style.top) + Math.sin(angle) * velocity + life * 0.15}px`;
-                    p.style.opacity = 1 - (life / 26);
-                }, 16);
-            }
-        }
-        
-        function showDamageNumber(x, y, amount, isCrit = false) {
-            const container = document.getElementById("damage-container");
-            const num = document.createElement("div");
-            
-            num.className = "damage-number";
-            num.style.left = `${x}px`;
-            num.style.top = `${y}px`;
-            num.style.color = isCrit ? "#ff00cc" : "#ffffff";
-            num.style.fontSize = isCrit ? "27px" : "21px";
-            num.innerHTML = formatNumber(amount);
-            
-            container.appendChild(num);
-            
-            setTimeout(() => {
-                num.style.transition = "all 0.6s ease";
-                num.style.transform = `translateY(-${40 + Math.random() * 50}px)`;
-                num.style.opacity = "0";
-                
-                setTimeout(() => num.remove(), 600);
-            }, 10);
-        }
-        
-        // ==================== WALL SYSTEM ====================
-        function getCurrentWallData() {
-            const world = worlds[game.currentWorld];
-            const wallNum = game.currentWallIndex + 1;
-            const hp = Math.floor(world.hpBase * Math.pow(1.6, game.currentWallIndex));
-            return { world, hp, reward: Math.floor(world.reward * Math.pow(1.35, game.currentWallIndex)) };
-        }
-        
-        function setupWall() {
-            const data = getCurrentWallData();
-            currentWallMaxHP = data.hp;
-            currentWallHP = data.hp;
-            
-            const wallEl = document.getElementById("wall");
-            const materialEl = document.getElementById("wall-material");
-            const labelEl = document.getElementById("wall-label");
-            
-            materialEl.style.background = `linear-gradient(${data.world.color}, #222)`;
-            
-            labelEl.innerHTML = `${data.world.name} Wall • ${formatNumber(currentWallMaxHP)} HP`;
-            
-            document.getElementById("world-name").innerText = data.world.name;
-            document.getElementById("wall-count").innerText = `Wall ${game.currentWallIndex + 1}/10`;
-            
-            updateHPBar();
-            
-            wallEl.style.transition = "none";
-            wallEl.style.transform = "scale(1)";
-            wallEl.style.opacity = "1";
-            wallEl.classList.remove("broken");
-            
-            setTimeout(() => {
-                wallEl.style.transition = "transform 0.05s ease";
-            }, 50);
-        }
-        
-        function updateHPBar() {
-            const percent = Math.max(0, Math.floor((currentWallHP / currentWallMaxHP) * 100));
-            document.getElementById("hp-bar").style.width = percent + "%";
-        }
-        
-        function breakWall() {
-            const data = getCurrentWallData();
-            const reward = Math.floor(data.reward * game.coinBonus);
-            
-            game.coins += reward;
-            game.wallsBroken++;
-            
-            // Create big break particles
-            const wallRect = document.getElementById("wall").getBoundingClientRect();
-            createParticles(wallRect.left + 190, wallRect.top + 190, 38);
-            
-            playSound("break");
-            
-            // Wall break animation
-            const wallEl = document.getElementById("wall");
-            wallEl.classList.add("broken");
-            
-            // Reward popup
-            const container = document.getElementById("damage-container");
-            const rewardText = document.createElement("div");
-            rewardText.className = "floating-text";
-            rewardText.style.left = "50%";
-            rewardText.style.top = "42%";
-            rewardText.style.fontSize = "28px";
-            rewardText.style.color = "#ffd700";
-            rewardText.style.transform = "translate(-50%, -50%)";
-            rewardText.innerHTML = `+${formatNumber(reward)} coins`;
-            container.appendChild(rewardText);
-            
-            setTimeout(() => {
-                rewardText.style.transition = "all 1.2s ease";
-                rewardText.style.opacity = "0";
-                setTimeout(() => rewardText.remove(), 800);
-            }, 200);
-            
-            // Progress to next wall
-            setTimeout(() => {
-                game.currentWallIndex++;
-                
-                if (game.currentWallIndex >= 10) {
-                    // Advance world
-                    if (game.currentWorld < worlds.length - 1) {
-                        game.currentWorld++;
-                        game.currentWallIndex = 0;
-                    } else {
-                        // Max world reached, loop last wall with higher scaling
-                        game.currentWallIndex = 8;
-                    }
-                }
-                
-                setupWall();
-                checkAchievements();
-                updateUI();
-                saveGame();
-            }, 650);
-        }
-        
-        function damageWall(amount, isTap = false, x = null, y = null) {
-            if (currentWallHP <= 0) return;
-            
-            let dmg = amount;
-            let isCrit = false;
-            
-            if (isTap) {
-                // Crit roll
-                if (Math.random() * 100 < game.critChance) {
-                    dmg = Math.floor(dmg * game.critDamage);
-                    isCrit = true;
-                }
-            }
-            
-            currentWallHP = Math.max(0, currentWallHP - dmg);
-            updateHPBar();
-            
-            // Visual feedback
-            const wallEl = document.getElementById("wall");
-            wallEl.style.transform = `scale(${isCrit ? 0.95 : 0.97})`;
-            setTimeout(() => {
-                wallEl.style.transform = "scale(1)";
-            }, 70);
-            
-            // Show damage number
-            const wallRect = wallEl.getBoundingClientRect();
-            const posX = x || (wallRect.left + 190 + (Math.random() - 0.5) * 130);
-            const posY = y || (wallRect.top + 110 + (Math.random() - 0.5) * 100);
-            
-            showDamageNumber(posX, posY, dmg, isCrit);
-            
-            // Particles
-            if (isTap || Math.random() < 0.3) {
-                createParticles(posX, posY, isCrit ? 8 : 4);
-            }
-            
-            playSound("hit");
-            
-            if (currentWallHP <= 0) {
-                breakWall();
-            }
-            
-            updateUI();
-        }
-        
-        function tapWall(e) {
-            const rect = e.currentTarget.getBoundingClientRect();
-            const x = e.clientX;
-            const y = e.clientY;
-            
-            const dmg = Math.floor(game.tapDamage * game.prestigeMultiplier * (tools[game.unlockedTools[game.unlockedTools.length-1]].damageMult || 1));
-            damageWall(dmg, true, x, y);
-        }
-        
-        // ==================== AUTO DAMAGE ====================
-        function startAutoDamage() {
-            if (autoDamageInterval) clearInterval(autoDamageInterval);
-            
-            autoDamageInterval = setInterval(() => {
-                if (currentWallHP > 0 && game.autoDamage > 0) {
-                    let autoDmg = game.autoDamage * game.prestigeMultiplier;
-                    
-                    // Apply helper damage
-                    let helperBonus = 0;
-                    Object.keys(game.helpers).forEach(key => {
-                        const h = helpersData[parseInt(key)];
-                        helperBonus += h.baseDamage * (game.helpers[key] || 0);
-                    });
-                    
-                    autoDmg += helperBonus * game.prestigeMultiplier;
-                    
-                    damageWall(Math.floor(autoDmg));
-                }
-            }, 300);
-        }
-        
-        // ==================== UPGRADES ====================
-        function renderUpgrades() {
-            const container = document.getElementById("upgrade-list");
-            container.innerHTML = "";
-            
-            upgradesData.forEach(upg => {
-                const owned = game.upgrades[upg.id] || 0;
-                const cost = Math.floor(upg.baseCost * Math.pow(1.6, owned));
-                
-                const card = document.createElement("div");
-                card.className = "upgrade-card";
-                card.innerHTML = `
-                    <h4>${upg.name} <span style="font-size:13px;opacity:0.6">(${owned})</span></h4>
-                    <div style="font-size:13px;color:#aaa;margin:4px 0 10px;">${upg.desc}</div>
-                    <div class="cost">🪙 ${formatNumber(cost)}</div>
-                    <button onclick="buyUpgrade('${upg.id}', this)">BUY</button>
-                `;
-                container.appendChild(card);
-            });
-        }
-        
-        function buyUpgrade(id, btn) {
-            const upg = upgradesData.find(u => u.id === id);
-            const owned = game.upgrades[id] || 0;
-            const cost = Math.floor(upg.baseCost * Math.pow(1.6, owned));
-            
-            if (game.coins < cost) return;
-            
-            game.coins -= cost;
-            game.upgrades[id] = owned + 1;
-            upg.effect();
-            
-            playSound("buy");
-            btn.parentElement.style.transition = "all 0.1s";
-            btn.parentElement.style.opacity = "0.3";
-            
-            setTimeout(() => {
-                renderUpgrades();
-                updateUI();
-                checkAchievements();
-                saveGame();
-            }, 120);
-        }
-        
-        // ==================== TOOLS ====================
-        function renderTools() {
-            const container = document.getElementById("tools-list");
-            container.innerHTML = "";
-            
-            tools.forEach((tool, index) => {
-                const unlocked = game.unlockedTools.includes(index);
-                
-                const card = document.createElement("div");
-                card.className = "helper-card";
-                card.style.borderColor = unlocked ? "#00ff88" : "#555";
-                
-                card.innerHTML = `
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <div class="tool-icon">${tool.icon}</div>
-                        <div>
-                            <div style="font-weight:700;">${tool.name}</div>
-                            <div style="font-size:13px;color:#aaa;">${tool.damageMult}x damage</div>
-                        </div>
-                    </div>
-                    <div style="margin-top:12px;">
-                        ${unlocked ? 
-                            `<div style="color:#00ff88;font-weight:700;">EQUIPPED</div>` : 
-                            `<button onclick="unlockTool(${index}, this)" style="width:100%;padding:8px;">Unlock (${formatNumber(tool.cost)})</button>`
-                        }
-                    </div>
-                `;
-                
-                container.appendChild(card);
-            });
-        }
-        
-        function unlockTool(index, btn) {
-            const tool = tools[index];
-            if (game.coins < tool.cost) return;
-            
-            game.coins -= tool.cost;
-            game.unlockedTools.push(index);
-            
-            // Update current tool visual
-            document.getElementById("current-tool").innerHTML = tool.icon;
-            
-            playSound("buy");
-            renderTools();
-            updateUI();
-            saveGame();
-        }
-        
-        // ==================== WORLDS ====================
-        function renderWorlds() {
-            const container = document.getElementById("worlds-list");
-            container.innerHTML = "";
-            
-            worlds.forEach((world, index) => {
-                const unlocked = index <= game.currentWorld;
-                
-                const card = document.createElement("div");
-                card.className = `world-card ${unlocked ? "unlocked" : ""} ${index === game.currentWorld ? "current" : ""}`;
-                
-                card.innerHTML = `
-                    <div style="font-size:22px;margin-bottom:4px;">${world.name}</div>
-                    <div style="font-size:12px;color:#999;">${unlocked ? "UNLOCKED" : "LOCKED"}</div>
-                `;
-                
-                if (unlocked) {
-                    card.onclick = () => {
-                        game.currentWorld = index;
-                        game.currentWallIndex = 0;
-                        setupWall();
-                        renderWorlds();
-                        hidePanel();
-                    };
-                }
-                
-                container.appendChild(card);
-            });
-        }
-        
-        // ==================== HELPERS ====================
-        function renderHelpers() {
-            const container = document.getElementById("helpers-list");
-            container.innerHTML = "";
-            
-            helpersData.forEach((helper, index) => {
-                const owned = game.helpers[index] || 0;
-                const cost = Math.floor(helper.cost * Math.pow(1.65, owned));
-                
-                const card = document.createElement("div");
-                card.className = "helper-card";
-                card.innerHTML = `
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <div style="font-size:34px;">${helper.icon}</div>
-                        <div style="flex:1">
-                            <div style="font-weight:700;">${helper.name}</div>
-                            <div style="font-size:13px;color:#aaa;">+${helper.baseDamage} auto dmg</div>
-                        </div>
-                    </div>
-                    <div style="margin-top:10px; font-size:14px;">
-                        <div>Owned: <span style="color:#ffd700">${owned}</span></div>
-                        <button onclick="buyHelper(${index}, this)" style="margin-top:6px;width:100%;padding:8px;">Buy (${formatNumber(cost)})</button>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
-        
-        function buyHelper(index, btn) {
-            const helper = helpersData[index];
-            const owned = game.helpers[index] || 0;
-            const cost = Math.floor(helper.cost * Math.pow(1.65, owned));
-            
-            if (game.coins < cost) return;
-            
-            game.coins -= cost;
-            game.helpers[index] = owned + 1;
-            
-            playSound("buy");
-            renderHelpers();
-            updateUI();
-            saveGame();
-        }
-        
-        // ==================== PRESTIGE ====================
-        function calculatePrestigeGain() {
-            return Math.floor(Math.sqrt(game.wallsBroken / 9));
-        }
-        
-        function updatePrestigeUI() {
-            document.getElementById("prestige-gain").innerText = calculatePrestigeGain();
-            document.getElementById("prestige-bonus").innerText = `+${Math.floor((game.prestigeMultiplier - 1) * 100)}%`;
-        }
-        
-        function prestigeReset() {
-            const gain = calculatePrestigeGain();
-            if (gain < 1) {
-                alert("You need at least 1 prestige point to rebirth.");
-                return;
-            }
-            
-            if (!confirm("Are you sure you want to prestige? This will reset your progress.")) return;
-            
-            // Apply prestige bonus
-            game.prestigePoints += gain;
-            game.prestigeMultiplier = 1 + (game.prestigePoints * 0.1);
-            
-            // Reset game progress
-            game.coins = 0;
-            game.tapDamage = 1;
-            game.autoDamage = 0;
-            game.critChance = 5;
-            game.critDamage = 2.5;
-            game.attackSpeed = 1;
-            game.coinBonus = 1;
-            game.offlineBonus = 1;
-            game.currentWorld = 0;
-            game.currentWallIndex = 0;
-            game.wallsBroken = 0;
-            game.upgrades = {};
-            game.helpers = {};
-            game.unlockedTools = [0];
-            
-            document.getElementById("current-tool").innerHTML = "⛏️";
-            
-            setupWall();
-            updatePrestigeUI();
-            hidePanel();
-            updateUI();
-            saveGame();
-        }
-        
-        // ==================== ACHIEVEMENTS ====================
-        function checkAchievements() {
-            let updated = false;
-            
-            achievementList.forEach(ach => {
-                if (game.achievements[ach.id]) return;
-                
-                let progress = 0;
-                if (ach.type === "walls") progress = game.wallsBroken;
-                else if (ach.type === "world") progress = game.currentWorld + 1;
-                else if (ach.type === "prestige") progress = game.prestigePoints;
-                else if (ach.type === "upgrades") progress = Object.keys(game.upgrades).length;
-                else if (ach.type === "coins") progress = game.coins;
-                
-                if (progress >= ach.goal) {
-                    game.achievements[ach.id] = true;
-                    game.coins += ach.reward;
-                    showFloatingReward(ach.name, ach.reward);
-                    updated = true;
-                }
-            });
-            
-            if (updated) updateUI();
-        }
-        
-        function showFloatingReward(name, reward) {
-            const el = document.createElement("div");
-            el.style.cssText = "position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#222;border:3px solid #ffd700;padding:8px 22px;border-radius:9999px;font-size:15px;z-index:999";
-            el.innerHTML = `🏆 ${name} +${reward} coins`;
-            document.body.appendChild(el);
-            
-            setTimeout(() => {
-                el.style.transition = "all 0.6s";
-                el.style.opacity = "0";
-                setTimeout(() => el.remove(), 500);
-            }, 2300);
-        }
-        
-        function renderAchievements() {
-            const container = document.getElementById("achievements-list");
-            container.innerHTML = "";
-            
-            achievementList.forEach(ach => {
-                const completed = !!game.achievements[ach.id];
-                
-                const div = document.createElement("div");
-                div.className = `achievement ${completed ? "completed" : ""}`;
-                div.innerHTML = `
-                    <div style="flex:1">
-                        <div style="font-weight:700;">${ach.name}</div>
-                        <div style="font-size:13px;color:#999;">${ach.desc}</div>
-                    </div>
-                    <div style="text-align:right;min-width:70px;">
-                        ${completed ? `<span style="color:#00ff88">✓ +${ach.reward}</span>` : `<span style="color:#666">${ach.reward}</span>`}
-                    </div>
-                `;
-                container.appendChild(div);
-            });
-        }
-        
-        // ==================== UI UPDATES ====================
-        function updateUI() {
-            document.getElementById("coins").innerText = formatNumber(game.coins);
-            document.getElementById("prestige-points").innerText = game.prestigePoints;
-            
-            // Update current tool icon if not already set
-            const toolEl = document.getElementById("current-tool");
-            const latestTool = tools[game.unlockedTools[game.unlockedTools.length - 1]];
-            if (toolEl.innerHTML !== latestTool.icon) {
-                toolEl.innerHTML = latestTool.icon;
-            }
-        }
-        
-        function showPanel(panel) {
-            hidePanel();
-            document.getElementById("panel-" + panel).classList.add("active");
-            
-            if (panel === "upgrades") renderUpgrades();
-            else if (panel === "tools") renderTools();
-            else if (panel === "worlds") renderWorlds();
-            else if (panel === "helpers") renderHelpers();
-            else if (panel === "prestige") updatePrestigeUI();
-            else if (panel === "achievements") renderAchievements();
-        }
-        
-        function hidePanel() {
-            document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
-        }
-        
-        // ==================== SAVE / LOAD ====================
-        function saveGame() {
-            localStorage.setItem("idleWallDestroyerSave", JSON.stringify(game));
-        }
-        
-        function loadGame() {
-            const saved = localStorage.getItem("idleWallDestroyerSave");
-            if (saved) {
-                const loaded = JSON.parse(saved);
-                Object.assign(game, loaded);
-                
-                // Ensure tool icon is updated
-                const latestTool = tools[game.unlockedTools[game.unlockedTools.length - 1]];
-                document.getElementById("current-tool").innerHTML = latestTool.icon;
-            }
-        }
-        
-        function resetSave() {
-            if (confirm("Reset ALL progress? This cannot be undone.")) {
-                localStorage.removeItem("idleWallDestroyerSave");
-                location.reload();
-            }
-        }
-        
-        function calculateOfflineEarnings() {
-            const now = Date.now();
-            const elapsed = (now - game.lastOffline) / 1000 / 60; // minutes
-            
-            if (elapsed > 1 && game.autoDamage > 0) {
-                const estimatedWalls = Math.floor(elapsed * 1.8);
-                const offlineCoins = Math.floor(estimatedWalls * 80 * game.offlineBonus * game.coinBonus);
-                
-                if (offlineCoins > 0) {
-                    game.coins += offlineCoins;
-                    const offlineMsg = document.createElement("div");
-                    offlineMsg.style.cssText = "position:fixed;top:110px;left:50%;transform:translateX(-50%);background:#1a1a2e;border:3px solid #00f0ff;padding:10px 24px;border-radius:9999px;font-size:15px;z-index:999";
-                    offlineMsg.innerHTML = `💤 Offline: +${formatNumber(offlineCoins)} coins`;
-                    document.body.appendChild(offlineMsg);
-                    
-                    setTimeout(() => {
-                        offlineMsg.style.transition = "all .6s";
-                        offlineMsg.style.opacity = "0";
-                        setTimeout(() => offlineMsg.remove(), 500);
-                    }, 2800);
-                }
-            }
-            
-            game.lastOffline = now;
-        }
-        
-        // ==================== GAME LOOP ====================
-        function gameLoop() {
-            const now = Date.now();
-            const dt = (now - lastTime) / 1000;
-            lastTime = now;
-            
-            // Auto save
-            if (now - game.lastSave > 15000) {
-                saveGame();
-                game.lastSave = now;
-            }
-            
-            updateUI();
-            
-            requestAnimationFrame(gameLoop);
-        }
-        
-        // ==================== INITIALIZATION ====================
-        function init() {
-            loadGame();
-            calculateOfflineEarnings();
-            
-            // Start with first wall
-            setupWall();
-            
-            // Start auto damage loop
-            startAutoDamage();
-            
-            // Update UI
-            updateUI();
-            updatePrestigeUI();
-            
-            // Keyboard support (space to tap)
-            document.addEventListener("keydown", function(e) {
-                if (e.key === " " || e.key === "Spacebar") {
-                    e.preventDefault();
-                    const wall = document.getElementById("wall");
-                    const rect = wall.getBoundingClientRect();
-                    damageWall(Math.floor(game.tapDamage * game.prestigeMultiplier), true, 
-                        rect.left + 190 + (Math.random() - 0.5) * 80, rect.top + 150);
-                }
-            });
-            
-            // Initial achievement check
-            setTimeout(checkAchievements, 600);
-            
-            // Start main loop
-            gameLoop();
-            
-            // Welcome message
-            console.log("%c[Idle Wall Destroyer] Game initialized successfully.", "color:#555");
-            
-            // Auto-save on close
-            window.addEventListener("beforeunload", saveGame);
-        }
-        
-        // Boot the game
-        window.onload = init;
-    </script>
+      }
+      grid.appendChild(card);
+    });
+  }
+
+  /* ---------- HELPERS ---------- */
+  function renderHelpers() {
+    const grid = document.getElementById("helpers-grid");
+    grid.innerHTML = "";
+    HELPERS.forEach((h, i) => {
+      const count = state.helpers[i] || 0;
+      const cost = Math.floor(h.cost * Math.pow(1.7, count));
+      const card = document.createElement("div");
+      card.className = "card-generic";
+      card.innerHTML = `
+        <div class="icon-badge">${h.icon}</div>
+        <h4>${h.name}</h4>
+        <div class="sub">${h.desc}</div>
+        <div style="font-family:var(--font-mono);font-size:13px;margin-bottom:6px;">Owned: <strong style="color:var(--accent-gold)">${count}</strong></div>
+        <button onclick="buyHelper(${i}, this)" ${state.coins < cost ? "disabled" : ""}>Buy (${fmtShort(cost)})</button>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  function buyHelper(index, btn) {
+    const h = HELPERS[index];
+    const count = state.helpers[index] || 0;
+    const cost = Math.floor(h.cost * Math.pow(1.7, count));
+    if (state.coins < cost) return;
+    state.coins -= cost;
+    state.helpers[index] = count + 1;
+    soundBuy();
+    renderHelpers();
+    updateUI();
+    saveProgress();
+  }
+
+  /* ---------- PRESTIGE ---------- */
+  function calculatePrestigeGain() {
+    return Math.max(0, Math.floor(Math.sqrt(state.wallsBroken / 9)));
+  }
+  function renderPrestige() {
+    const gain = calculatePrestigeGain();
+    document.getElementById("prestige-gain").textContent = gain;
+    document.getElementById("prestige-mult").textContent = Math.floor((state.prestigeMultiplier - 1) * 100);
+    const btn = document.querySelector("#panel-prestige button");
+    const w = document.getElementById("prestige-warning");
+    if (gain < 1) {
+      btn.disabled = true; btn.style.opacity = "0.5"; btn.style.cursor = "not-allowed";
+      w.textContent = "Break at least 1 wall to prestige.";
+    } else {
+      btn.disabled = false; btn.style.opacity = "1"; btn.style.cursor = "pointer";
+      w.textContent = "This will reset walls, upgrades, coins, and tools.";
+    }
+  }
+  function performPrestige() {
+    const gain = calculatePrestigeGain();
+    if (gain < 1) return;
+    if (!confirm("Prestige will reset all progress except prestige points. Continue?")) return;
+    state.prestigePoints += gain;
+    state.prestigeMultiplier = 1 + (state.prestigePoints * 0.1);
+    state.coins = 0;
+    state.tapDamage = 1;
+    state.autoDamage = 0;
+    state.critChance = 5;
+    state.critDamage = 2.5;
+    state.attackSpeed = 1;
+    state.coinBonus = 1;
+    state.offlineBonus = 1;
+    state.currentWorld = 0;
+    state.currentWallIndex = 0;
+    state.wallsBroken = 0;
+    state.upgrades = {};
+    state.helpers = {};
+    state.unlockedTools = [0];
+    document.getElementById("tool-indicator").textContent = "Pickaxe";
+    document.getElementById("wall-decor").textContent = "⛏️";
+    setupWall();
+    soundPrestige();
+    showToast("Prestige complete! +" + gain + " points");
+    closePanel();
+    updateUI();
+    saveProgress();
+  }
+
+  /* ---------- ACHIEVEMENTS ---------- */
+  function checkAchievements() {
+    let updated = false;
+    ACHIEVEMENTS.forEach(ach => {
+      if (state.achievements[ach.id]) return;
+      let progress = 0;
+      if (ach.type === "walls") progress = state.wallsBroken;
+      else if (ach.type === "world") progress = state.currentWorld + 1;
+      else if (ach.type === "prestige") progress = state.prestigePoints;
+      else if (ach.type === "upgrades") progress = Object.keys(state.upgrades).length;
+      else if (ach.type === "coins") progress = state.coins;
+      if (progress >= ach.goal) {
+        state.achievements[ach.id] = true;
+        state.coins += ach.reward;
+        showToast("🏆 " + ach.name + " +" + fmtShort(ach.reward));
+        updated = true;
+      }
+    });
+    if (updated) { renderAchievements(); saveProgress(); }
+  }
+
+  function renderAchievements() {
+    const grid = document.getElementById("achievements-grid");
+    grid.innerHTML = "";
+    ACHIEVEMENTS.forEach(ach => {
+      const completed = !!state.achievements[ach.id];
+      const row = document.createElement("div");
+      row.className = "achievement-row" + (completed ? " completed" : "");
+      row.innerHTML = `
+        <div class="ach-icon">${completed ? "🏆" : "🔒"}</div>
+        <div>
+          <div class="ach-name">${ach.name}</div>
+          <div class="ach-desc">${ach.desc}</div>
+        </div>
+        <div class="ach-reward">+${fmtShort(ach.reward)}</div>
+        <div class="ach-check">${completed ? "✓" : ""}</div>
+      `;
+      grid.appendChild(row);
+    });
+  }
+
+  /* ---------- DAILY ---------- */
+  function renderDaily() {
+    const btn = document.getElementById("daily-btn");
+    const timer = document.getElementById("daily-timer");
+    const now = Date.now();
+    if (now < state.dailyNextAvailable) {
+      btn.disabled = true;
+      btn.textContent = "CLAIMED";
+      const diff = state.dailyNextAvailable - now;
+      const hrs = Math.floor(diff / 3600000);
+      const mins = Math.floor((diff % 3600000) / 60000);
+      timer.textContent = "Next in: " + hrs + "h " + mins + "m";
+    } else {
+      btn.disabled = false;
+      btn.textContent = "CLAIM REWARD";
+      timer.textContent = "Available now!";
+    }
+  }
+  function claimDaily() {
+    if (Date.now() < state.dailyNextAvailable) return;
+    const reward = 5000 * (1 + state.prestigeMultiplier * 0.3);
+    state.coins += Math.floor(reward);
+    state.dailyClaimed = Date.now();
+    state.dailyNextAvailable = Date.now() + 86400000; // 24h
+    state.dailyStreak = Math.min(state.dailyStreak + 1, 7);
+    soundDaily();
+    showToast("Daily reward claimed! +" + fmtShort(Math.floor(reward)));
+    renderDaily();
+    updateUI();
+    saveProgress();
+  }
+
+  /* ---------- SAVE / LOAD ---------- */
+  function saveProgress() {
+    const data = JSON.stringify(state);
+    localStorage.setItem("idleWallSave_v2", data);
+    state.lastSave = Date.now();
+  }
+
+  function loadProgress() {
+    const raw = localStorage.getItem("idleWallSave_v2");
+    if (raw) {
+      try {
+        const saved = JSON.parse(raw);
+        Object.assign(state, saved);
+      } catch (e) {}
+    }
+  }
+
+  function resetSave() {
+    if (!confirm("This will permanently delete all progress. Are you sure?")) return;
+    localStorage.removeItem("idleWallSave_v2");
+    location.reload();
+  }
+
+  function calculateOffline() {
+    const now = Date.now();
+    const elapsedMin = (now - state.lastOffline) / 60000;
+    if (elapsedMin > 2 && state.autoDamage > 0) {
+      const wallsApprox = Math.floor(elapsedMin * 1.5);
+      const coinsApprox = Math.floor(wallsApprox * 120 * state.offlineBonus * state.coinBonus);
+      if (coinsApprox > 0) {
+        state.coins += coinsApprox;
+        showToast("💤 Offline earnings +" + fmtShort(coinsApprox));
+      }
+    }
+    state.lastOffline = now;
+  }
+
+  /* ---------- UI ---------- */
+  function updateUI() {
+    document.getElementById("coins-display").textContent = fmtShort(state.coins);
+    document.getElementById("prestige-display").textContent = state.prestigePoints;
+    document.getElementById("mult-label").textContent = "+" + Math.floor((state.prestigeMultiplier - 1) * 100) + "%";
+    document.getElementById("wall-decor").textContent = TOOLS[state.unlockedTools[state.unlockedTools.length - 1]]?.icon || "⛏️";
+    document.getElementById("tool-indicator").textContent = TOOLS[state.unlockedTools[state.unlockedTools.length - 1]]?.name || "Pickaxe";
+  }
+
+  function openPanel(name) {
+    document.querySelectorAll(".panel-screen").forEach(p => p.classList.remove("active"));
+    document.getElementById("panel-" + name).classList.add("active");
+    if (name === "upgrades") renderUpgrades();
+    else if (name === "tools") renderTools();
+    else if (name === "worlds") renderWorlds();
+    else if (name === "helpers") renderHelpers();
+    else if (name === "prestige") renderPrestige();
+    else if (name === "achievements") renderAchievements();
+    else if (name === "daily") renderDaily();
+  }
+
+  function closePanel() {
+    document.querySelectorAll(".panel-screen").forEach(p => p.classList.remove("active"));
+  }
+
+  /* ---------- TOAST ---------- */
+  let toastTimer = null;
+  function showToast(text) {
+    const el = document.getElementById("toast-msg");
+    el.textContent = text;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+  }
+
+  /* ---------- SETTINGS ---------- */
+  function updateSfxVolume(v) { state.sfxVolume = parseFloat(v); saveProgress(); }
+  function updateMusicVolume(v) { state.musicVolume = parseFloat(v); saveProgress(); }
+
+  /* ---------- START / INIT ---------- */
+  function startGame() {
+    document.getElementById("title-screen").classList.add("hidden");
+    gameStarted = true;
+    setTimeout(() => {
+      setupWall();
+      startAutoDamage();
+      updateUI();
+      renderAchievements();
+      renderDaily();
+      showToast("Game started!");
+    }, 400);
+  }
+  function loadSaveAndStart() {
+    loadProgress();
+    startGame();
+  }
+
+  /* ---------- GAME LOOP ---------- */
+  function gameLoop() {
+    const now = Date.now();
+    const dt = (now - lastTime) / 1000;
+    lastTime = now;
+    if (gameStarted) {
+      if (now - state.lastSave > 20000) { saveProgress(); }
+    }
+    updateUI();
+    requestAnimationFrame(gameLoop);
+  }
+
+  /* ---------- INIT ---------- */
+  window.addEventListener("load", () => {
+    loadProgress();
+    calculateOffline();
+    gameLoop();
+    // Auto-save on close
+    window.addEventListener("beforeunload", saveProgress);
+    // Space / enter to tap wall when visible
+    document.addEventListener("keydown", (e) => {
+      if (e.key === " " || e.code === "Space") {
+        e.preventDefault();
+        const wall = document.getElementById("wall");
+        const rect = wall.getBoundingClientRect();
+        const dmg = Math.floor(state.tapDamage * state.prestigeMultiplier * (TOOLS[state.unlockedTools[state.unlockedTools.length - 1]]?.mult || 1));
+        damageWall(dmg, true, rect.left + 190, rect.top + 190);
+      }
+      if (e.key === "Escape") closePanel();
+    });
+  });
+
+  // Global functions for inline onclick handlers
+  window.handleWallClick = handleWallClick;
+  window.openPanel = openPanel;
+  window.closePanel = closePanel;
+  window.startGame = startGame;
+  window.loadSaveAndStart = loadSaveAndStart;
+  window.buyUpgrade = buyUpgrade;
+  window.unlockTool = unlockTool;
+  window.buyHelper = buyHelper;
+  window.performPrestige = performPrestige;
+  window.claimDaily = claimDaily;
+  window.resetSave = resetSave;
+  window.updateSfxVolume = updateSfxVolume;
+  window.updateMusicVolume = updateMusicVolume;
+  </script>
 </body>
 </html>
