@@ -32,6 +32,7 @@
     $("#game").classList.remove("hidden");
 
     onResize();
+    UI.applyQuality();
     UI.applyWorldSkin();
     UI.refreshPips();
     UI.refreshHp();

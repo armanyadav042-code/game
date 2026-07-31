@@ -10,7 +10,7 @@ const UI = (() => {
     coins: $("#coins-val"), gems: $("#gems-val"), cores: $("#cores-val"),
     curCoins: $("#cur-coins"), curCores: $("#cur-cores"),
     statTap: $("#stat-tap"), statDps: $("#stat-dps"), statWorld: $("#stat-world"), statBoost: $("#stat-boost"),
-    wall: $("#wall"), wallFace: $("#wall-face"), wallFlash: $("#wall-flash"),
+    wall: $("#wall"), wallFace: $("#wall-face"), wallFlash: $("#wall-flash"), wallDamage: $("#wall-damage"),
     wallName: $("#wall-name"), hpFill: $("#hp-fill"), hpText: $("#hp-text"),
     pips: $("#stage-pips"), bossBanner: $("#boss-banner"),
     tool: $("#tool-sprite"), combo: $("#combo-box"), comboCount: $("#combo-count"),
@@ -65,6 +65,8 @@ const UI = (() => {
     el.hpFill.className = ratio < 0.25 ? "low" : ratio < 0.55 ? "mid" : "";
     el.hpText.textContent = `${fmt(Math.ceil(S.wallHp))} / ${fmt(S.wallMaxHp)}`;
     FX.setCrackLevel(1 - ratio);
+    // damage stages: bruise overlay deepens as the wall weakens
+    el.wallDamage.style.opacity = Math.min(1, (1 - ratio) * 1.15).toFixed(2);
   }
 
   function refreshPips() {
@@ -89,8 +91,13 @@ const UI = (() => {
     el.wallFace.style.background = w.face;
     el.wall.style.setProperty("--wall-glow", w.glow);
     el.worldBg.style.background = w.bg;
+    // world accent tints the beams, floor grid, wall name and HP glow
+    document.documentElement.style.setProperty("--world-accent", w.accent || "#00e5ff");
+    el.wallName.style.textShadow = `0 0 12px ${w.accent || "#00e5ff"}66`;
     el.wallName.textContent = (isBossStageIdx(S.stage) ? "💀 BOSS · " : "") + w.wallName + " " + roman(S.stage + 1);
     el.bossBanner.classList.toggle("hidden", !isBossStageIdx(S.stage));
+    el.wall.classList.toggle("boss-wall", isBossStageIdx(S.stage));
+    FX.setAmbient(w);
   }
   function roman(n) {
     if (n > 30) return "#" + n;
@@ -532,18 +539,24 @@ const UI = (() => {
 
   /* ---------- settings tab ---------- */
   function renderSettings(root) {
-    const rows = [
-      ["🔊 Sound Effects", "sfx", (v) => AudioSys.setSfx(v)],
-      ["🎵 Music", "music", (v) => AudioSys.setMusic(v)],
-      ["✨ Particles", "particles", null],
-      ["📳 Screen Shake", "shake", null],
-    ];
-    for (const [label, key, cb] of rows) {
+    /* --- helpers to build grouped rows --- */
+    const section = (label, icon) => {
+      const s = document.createElement("div");
+      s.className = "section-title";
+      s.textContent = `${icon} ${label}`;
+      root.appendChild(s);
+      const g = document.createElement("div");
+      g.className = "setting-group";
+      root.appendChild(g);
+      return g;
+    };
+    const toggleRow = (group, icon, label, key, cb) => {
       const r = document.createElement("div");
       r.className = "setting-row";
-      r.innerHTML = `<span>${label}</span>`;
+      r.innerHTML = `<span class="set-lbl"><span class="set-ico">${icon}</span>${label}</span>`;
       const t = document.createElement("button");
       t.className = "toggle" + (S.settings[key] ? " on" : "");
+      t.setAttribute("aria-label", label);
       t.onclick = () => {
         S.settings[key] = !S.settings[key];
         t.classList.toggle("on", S.settings[key]);
@@ -552,19 +565,61 @@ const UI = (() => {
         saveGame();
       };
       r.appendChild(t);
-      root.appendChild(r);
+      group.appendChild(r);
+    };
+
+    /* --- AUDIO --- */
+    const gAudio = section("Audio", "🔊");
+    toggleRow(gAudio, "🔔", "Sound Effects", "sfx", (v) => AudioSys.setSfx(v));
+    toggleRow(gAudio, "🎵", "Music", "music", (v) => AudioSys.setMusic(v));
+
+    /* --- GRAPHICS --- */
+    const gGfx = section("Graphics", "✨");
+    toggleRow(gGfx, "💥", "Particles", "particles", null);
+    toggleRow(gGfx, "📳", "Screen Shake", "shake", null);
+
+    // quality segmented control
+    const qr = document.createElement("div");
+    qr.className = "setting-row";
+    qr.innerHTML = `<span class="set-lbl"><span class="set-ico">🖥️</span>Quality</span>`;
+    const seg = document.createElement("div");
+    seg.className = "seg-control";
+    for (const [val, lbl] of [["low", "Low"], ["med", "Medium"], ["high", "High"]]) {
+      const b = document.createElement("button");
+      b.textContent = lbl;
+      b.classList.toggle("sel", S.settings.quality === val);
+      b.onclick = () => {
+        S.settings.quality = val;
+        applyQuality();
+        AudioSys.play("ui");
+        saveGame();
+        renderPanel();
+      };
+      seg.appendChild(b);
     }
+    qr.appendChild(seg);
+    gGfx.appendChild(qr);
+
+    const qNote = document.createElement("div");
+    qNote.className = "setting-hint";
+    qNote.textContent = S.settings.quality === "low"
+      ? "Low: no ambient effects or animations — best battery life."
+      : S.settings.quality === "med"
+        ? "Medium: reduced particles and effects."
+        : "High: all effects on — full visual experience.";
+    gGfx.appendChild(qNote);
+
+    /* --- SAVE DATA --- */
+    const gSave = section("Save Data", "💾");
 
     const saveBtn = document.createElement("button");
-    saveBtn.className = "buy-btn green-btn";
-    saveBtn.style.cssText = "width:100%;padding:13px;margin:8px 0";
+    saveBtn.className = "buy-btn green-btn setting-action";
     saveBtn.textContent = "💾 Save Now";
     saveBtn.onclick = () => { saveGame(); toast("💾 Game saved"); };
-    root.appendChild(saveBtn);
+    gSave.appendChild(saveBtn);
 
     const resetBtn = document.createElement("button");
-    resetBtn.className = "buy-btn red-btn";
-    resetBtn.style.cssText = "width:100%;padding:13px";
+    resetBtn.className = "buy-btn red-btn setting-action";
     resetBtn.textContent = "🗑️ Reset ALL Progress";
     resetBtn.onclick = () => {
       modal({
@@ -577,18 +632,24 @@ const UI = (() => {
               closePanel();
               onWallSpawn(); refreshHud();
               FX.rebuildHelpers(); onToolChange();
+              applyQuality();
               toast("Save wiped. Fresh start!");
             } },
         ],
       });
     };
-    root.appendChild(resetBtn);
+    gSave.appendChild(resetBtn);
 
     const info = document.createElement("div");
-    info.className = "panel-note";
-    info.style.marginTop = "14px";
-    info.innerHTML = `Progress autosaves every ${SAVE_INTERVAL}s and when you leave the page.<br>Offline earnings are collected on return (cap ${fmtTime(7200 + upLvl("offline") * 1800)}).`;
-    root.appendChild(info);
+    info.className = "setting-hint";
+    info.innerHTML = `Autosaves every ${SAVE_INTERVAL}s and when you leave the page.<br>Offline earnings cap: ${fmtTime(7200 + upLvl("offline") * 1800)}.`;
+    gSave.appendChild(info);
+  }
+
+  /** Apply graphics quality: low disables heavy CSS animations too. */
+  function applyQuality() {
+    document.body.classList.toggle("q-low", S.settings.quality === "low");
+    document.body.classList.toggle("q-med", S.settings.quality === "med");
   }
 
   /* ---------- generic card builder ---------- */
@@ -650,6 +711,6 @@ const UI = (() => {
     onPlayerHit, onAutoDamage, uiTick, panelTick,
     toast, modal, closeModal, markAwardsDot,
     openTab, closePanel, openDaily, showOffline,
-    floatText, centerOfWall,
+    floatText, centerOfWall, applyQuality,
   };
 })();

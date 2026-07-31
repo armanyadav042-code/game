@@ -42,6 +42,8 @@
   <!-- Main play area -->
   <main id="main-area">
     <div id="world-bg"></div>
+    <!-- ambient background FX (embers, snow, stars...) -->
+    <canvas id="bg-canvas"></canvas>
     <div id="shake-layer">
 
       <div id="wall-zone">
@@ -51,10 +53,15 @@
         <!-- helpers orbit around the wall -->
         <div id="helper-ring"></div>
 
+        <!-- pulsing glow aura behind the wall -->
+        <div id="wall-aura"></div>
+
         <!-- the wall itself -->
         <div id="wall">
           <div id="wall-face"></div>
+          <div id="wall-damage"></div>
           <canvas id="crack-canvas"></canvas>
+          <div id="wall-shine"></div>
           <div id="wall-flash"></div>
         </div>
 

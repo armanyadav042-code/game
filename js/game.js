@@ -34,7 +34,7 @@ function defaultState() {
 
     achDone: {},              // id -> true when claimed/awarded
 
-    settings: { sfx: true, music: true, particles: true, shake: true },
+    settings: { sfx: true, music: true, particles: true, shake: true, quality: "high" },
 
     stats: {
       taps: 0, crits: 0, wallsBroken: 0, bossKills: 0,

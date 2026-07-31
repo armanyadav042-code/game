@@ -10,8 +10,21 @@ const FX = (() => {
   const ctx = canvas.getContext("2d");
   let W = 0, H = 0, dpr = 1;
 
+  /* ---------- ambient background canvas ---------- */
+  const bgCanvas = $("#bg-canvas");
+  const bctx = bgCanvas.getContext("2d");
+  const ambient = [];            // themed drifting particles
+  let ambientType = "dust";
+  let ambientColors = ["#888"];
+  const AMBIENT_COUNT = 46;
+
   const MAX_PARTICLES = 260;
   const parts = [];           // active particle objects
+
+  /** Graphics-quality multiplier for particle spawns. */
+  function qMult() {
+    return { low: 0.35, med: 0.65, high: 1 }[S.settings.quality] || 1;
+  }
 
   function resize() {
     const r = canvas.parentElement.getBoundingClientRect();
@@ -20,11 +33,79 @@ const FX = (() => {
     canvas.width = Math.floor(W * dpr);
     canvas.height = Math.floor(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    bgCanvas.width = Math.floor(W * dpr);
+    bgCanvas.height = Math.floor(H * dpr);
+    bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  /* ================= AMBIENT WORLD PARTICLES =================
+     Each world has its own weather: rising embers, falling snow,
+     neon rain, twinkling stars, drifting dust, welding sparks... */
+  function setAmbient(world) {
+    const a = world.ambient || { type: "dust", colors: ["#888"] };
+    if (a.type === ambientType && a.colors === ambientColors && ambient.length) return; // same world — keep particles
+    ambientType = a.type;
+    ambientColors = a.colors;
+    ambient.length = 0;
+    for (let i = 0; i < AMBIENT_COUNT; i++) ambient.push(makeAmbient(true));
+  }
+
+  /** Create one ambient particle, positioned anywhere (init) or at spawn edge. */
+  function makeAmbient(anywhere) {
+    const c = choose(ambientColors);
+    const base = { color: c, tw: rand(0, Math.PI * 2) };
+    switch (ambientType) {
+      case "embers":  return { ...base, x: rand(0, W), y: anywhere ? rand(0, H) : H + 10, vx: rand(-14, 14), vy: rand(-70, -26), size: rand(1.5, 3.6), wob: rand(1, 3) };
+      case "snow":    return { ...base, x: rand(0, W), y: anywhere ? rand(0, H) : -10,   vx: rand(-18, 18), vy: rand(18, 46),  size: rand(1.5, 3.4), wob: rand(.6, 1.6) };
+      case "rain":    return { ...base, x: rand(0, W), y: anywhere ? rand(0, H) : -14,   vx: rand(-8, 8),   vy: rand(220, 380), size: rand(6, 14),   wob: 0 };
+      case "stars":   return { ...base, x: rand(0, W), y: rand(0, H),                    vx: rand(-3, 3),   vy: rand(-3, 3),   size: rand(.8, 2.2),  wob: rand(1.5, 4) };
+      case "sparks":  return { ...base, x: rand(0, W), y: anywhere ? rand(0, H) : H + 8, vx: rand(-30, 30), vy: rand(-110, -50), size: rand(1, 2.4), wob: rand(2, 5) };
+      case "sparkle": return { ...base, x: rand(0, W), y: rand(0, H),                    vx: rand(-6, 6),   vy: rand(-14, -4), size: rand(1, 2.6),   wob: rand(2, 5) };
+      default:        return { ...base, x: rand(0, W), y: anywhere ? rand(0, H) : rand(0, H), vx: rand(-10, 10), vy: rand(-12, 12), size: rand(1, 3), wob: rand(.5, 1.5) };
+    }
+  }
+
+  let ambientT = 0;
+  function updateAmbient(dt) {
+    bctx.clearRect(0, 0, W, H);
+    if (!S.settings.particles || !ambient.length || S.settings.quality === "low") return;
+    const shown = S.settings.quality === "med" ? Math.floor(ambient.length * 0.55) : ambient.length;
+    ambientT += dt;
+    for (let i = 0; i < shown; i++) {
+      const p = ambient[i];
+      p.x += (p.vx + Math.sin(ambientT * p.wob + p.tw) * 12) * dt;
+      p.y += p.vy * dt;
+      // recycle when off-screen
+      if (p.y < -20 || p.y > H + 20 || p.x < -20 || p.x > W + 20) {
+        ambient[i] = makeAmbient(ambientType === "stars" || ambientType === "sparkle");
+        continue;
+      }
+      const twinkle = 0.45 + 0.55 * Math.abs(Math.sin(ambientT * p.wob + p.tw));
+      bctx.globalAlpha = twinkle * 0.7;
+      bctx.fillStyle = p.color;
+      if (ambientType === "rain") {
+        // vertical streak
+        bctx.fillRect(p.x, p.y, 1.4, p.size);
+      } else {
+        bctx.beginPath();
+        bctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        bctx.fill();
+        // soft glow for embers/stars/sparkle
+        if (ambientType !== "dust" && ambientType !== "snow") {
+          bctx.globalAlpha = twinkle * 0.18;
+          bctx.beginPath();
+          bctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
+          bctx.fill();
+        }
+      }
+    }
+    bctx.globalAlpha = 1;
   }
 
   /** Spawn debris chunks flying out of a point (in main-area coords). */
   function burst(x, y, colors, count, power = 1) {
     if (!S.settings.particles) count = Math.floor(count / 3);
+    count = Math.max(2, Math.floor(count * qMult()));
     for (let i = 0; i < count; i++) {
       if (parts.length >= MAX_PARTICLES) parts.shift();
       const ang = rand(0, Math.PI * 2);
@@ -93,6 +174,7 @@ const FX = (() => {
       }
     }
     ctx.globalAlpha = 1;
+    updateAmbient(dt);
     updateShake(dt);
     updateHelpers(dt);
   }
@@ -233,5 +315,5 @@ const FX = (() => {
     setTimeout(() => { h.el.style.filter = ""; }, 120);
   }
 
-  return { resize, resizeCrack, update, burst, sparkRing, shake, setCrackLevel, clearCracks, rebuildHelpers, helperZap };
+  return { resize, resizeCrack, update, burst, sparkRing, shake, setCrackLevel, clearCracks, rebuildHelpers, helperZap, setAmbient };
 })();
