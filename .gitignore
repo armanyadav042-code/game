@@ -1,0 +1,16 @@
+# Godot 4 editor cache
+.godot/
+export_presets.cfg.local
+*.tmp
+
+# Build output
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / tool caches
+.import/
+.venv/
+node_modules/
