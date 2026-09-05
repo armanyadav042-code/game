@@ -120,14 +120,14 @@ func set_volume(value: float) -> void:
 	_save_settings()
 
 
-func play_sfx(name: String, pitch_scale: float = 1.0) -> void:
+func play_sfx(sfx_name: String, pitch_scale: float = 1.0) -> void:
 	if muted:
 		return
-	if not _streams.has(name):
+	if not _streams.has(sfx_name):
 		return
 	for p in _players:
 		if not p.playing:
-			p.stream = _streams[name]
+			p.stream = _streams[sfx_name]
 			p.pitch_scale = pitch_scale
 			p.play()
 			return

@@ -60,7 +60,7 @@ func _on_body_entered(body: Node) -> void:
 	if not body.is_in_group("player"):
 		return
 	if body.has_method("launch_up"):
-		body.launch_up(LAUNCH_SPEED)
+		body.call("launch_up", LAUNCH_SPEED)
 		Effects.burst(get_parent(), global_position + Vector3(0, 0.6, 0), Color(0.3, 0.9, 1.0), 30, 4.0, 10.0, 0.8)
 
 
