@@ -25,12 +25,12 @@ const ROTATING_SCENE := preload("res://scenes/obstacles/rotating_bar.tscn")
 const LAUNCH_SCENE := preload("res://scenes/obstacles/launch_pad.tscn")
 const PUSH_SCENE := preload("res://scenes/obstacles/push_crate.tscn")
 
-var player: Node = null
+var player
 var _materials: Dictionary = {}
 var _course_end := 0.0
 var _obstacles: Array = []
 var _checkpoints: Array = []
-var _finish: Node = null
+var _finish
 var _current_checkpoint := 0
 var _respawn_pos := Vector3(0, 0, 0)
 var _rng := RandomNumberGenerator.new()
@@ -185,7 +185,8 @@ func _next_roof(width: float, depth: float, top_y: float, gap: float, color: Col
 func _add_checkpoint(spawn_platform: StaticBody3D) -> void:
 	var spawn := spawn_platform.position + Vector3(0, 2.5, 0)
 	var visual := spawn_platform.position + Vector3(0, 1.1, 0)
-	var cp = CHECKPOINT_SCENE.instantiate()
+	var cp
+	cp = CHECKPOINT_SCENE.instantiate()
 	cp.index = _checkpoints.size()
 	cp.respawn_position = spawn
 	add_child(cp)
@@ -202,35 +203,40 @@ func _on_checkpoint_activated(index: int) -> void:
 
 
 func _add_moving(center: Vector3, size: Vector3, direction: Vector3, range: float, speed: float, color: Color) -> void:
-	var o = MOVING_SCENE.instantiate()
+	var o
+	o = MOVING_SCENE.instantiate()
 	add_child(o)
 	o.setup(center, size, direction, range, speed, color)
 	_obstacles.append(o)
 
 
 func _add_rotating(center: Vector3, size: Vector3, speed: float) -> void:
-	var o = ROTATING_SCENE.instantiate()
+	var o
+	o = ROTATING_SCENE.instantiate()
 	add_child(o)
 	o.setup(center, size, speed)
 	_obstacles.append(o)
 
 
 func _add_falling(center: Vector3, size: Vector3, color: Color) -> void:
-	var o = FALLING_SCENE.instantiate()
+	var o
+	o = FALLING_SCENE.instantiate()
 	add_child(o)
 	o.setup(center, size, color)
 	_obstacles.append(o)
 
 
 func _add_launch_pad(center: Vector3) -> void:
-	var o = LAUNCH_SCENE.instantiate()
+	var o
+	o = LAUNCH_SCENE.instantiate()
 	add_child(o)
 	o.global_position = center
 	_obstacles.append(o)
 
 
 func _add_push_crate(center: Vector3, size: Vector3, color: Color) -> void:
-	var o = PUSH_SCENE.instantiate()
+	var o
+	o = PUSH_SCENE.instantiate()
 	add_child(o)
 	o.setup(center, size, color)
 	_obstacles.append(o)

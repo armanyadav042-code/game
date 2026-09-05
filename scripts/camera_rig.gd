@@ -35,8 +35,9 @@ func _process(delta: float) -> void:
 
 	var target_focus := player.global_position + Vector3(0, LOOK_HEIGHT, 0)
 	var velocity := Vector3.ZERO
-	if player is RigidBody3D:
-		velocity = player.linear_velocity
+	var body := player as RigidBody3D
+	if body != null:
+		velocity = body.linear_velocity
 	var lead := Vector3(0, 0, clampf(velocity.z * 0.12, -1.2, 2.6))
 	lead.x = clampf(velocity.x * 0.06, -1.4, 1.4)
 	target_focus += lead

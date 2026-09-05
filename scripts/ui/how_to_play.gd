@@ -50,8 +50,8 @@ func _build() -> void:
 	vb.add_child(spacer)
 
 	var text := UI.label(
-		"RUN across the rooftops, JUMP the gaps, dodge the \
-		spinning bars and moving walls, and grab every checkpoint.\n\n" +
+		"RUN across the rooftops, JUMP the gaps, dodge the spinning bars " +
+		"and moving walls, and grab every checkpoint.\n\n" +
 		"DESKTOP\n" +
 		"A / D or LEFT / RIGHT  -  move left / right\n" +
 		"W / S or UP / DOWN      -  run forward / back\n" +
@@ -62,8 +62,8 @@ func _build() -> void:
 		"MOBILE\n" +
 		"On-screen LEFT, RIGHT and JUMP buttons.\n\n" +
 		"TIP\n" +
-		"The ragdoll is floppy on purpose! Steer carefully and \
-		hold forward while airborne to keep control.",
+		"The ragdoll is floppy on purpose! Steer carefully and " +
+		"hold forward while airborne to keep control.",
 		21,
 		Color(0.86, 0.92, 1.0),
 		false

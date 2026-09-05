@@ -105,12 +105,13 @@ func _build_touch_controls() -> void:
 	left.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	left.offset_left = 24
 	left.offset_top = -146
-	left.offset_right = 260
+	left.offset_right = 380
 	left.offset_bottom = -30
 	left.add_theme_constant_override("separation", 12)
 	add_child(left)
 
 	_add_touch_button(left, "LEFT", "move_left", Color(0.22, 0.55, 0.94, 0.65))
+	_add_touch_button(left, "RIGHT", "move_right", Color(0.22, 0.55, 0.94, 0.65))
 
 	var jump := UI.make_button("JUMP", Color(0.95, 0.60, 0.22, 0.7), 170, 104)
 	jump.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)

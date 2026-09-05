@@ -2,16 +2,20 @@ extends Node3D
 ## Main entry scene: builds the world, wires the player/camera/level together,
 ## and drives the menu/HUD/finish UI flow.
 
-var level: Node3D
-var player: Node
-var camera_rig: Node3D
+# These hold runtime-loaded scene instances whose behaviour comes from their
+# own scripts. They must stay untyped (Variant) so duck-typed calls like
+# level.configure() and main_menu.play_pressed resolve dynamically — a static
+# Node3D/Control type makes the GDScript analyzer fail with "not found in base".
+var level
+var player
+var camera_rig
 var ui_layer: CanvasLayer
-var main_menu: Control
-var hud: Control
-var pause_menu: Control
-var finish_screen: Control
-var how_screen: Control
-var settings_screen: Control
+var main_menu
+var hud
+var pause_menu
+var finish_screen
+var how_screen
+var settings_screen
 
 
 func _ready() -> void:
